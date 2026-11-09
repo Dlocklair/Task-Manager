@@ -1,7 +1,7 @@
 import { AlertTriangle, Calendar, CheckCircle2, Clock } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { PriorityKey, Project, StatusKey, Task } from "../types";
-import { priorityDef, statusDef } from "../constants";
+import { STATUSES, priorityDef, statusDef } from "../constants";
 import { daysFromToday, shortDate } from "../utils";
 
 export function PriorityBars({ priority, size = 14 }: { priority: PriorityKey; size?: number }) {
@@ -96,6 +96,33 @@ export function Avatar({ name }: { name: string }) {
   return (
     <span className="avatar" title={name} aria-label={name}>
       {initials(name)}
+    </span>
+  );
+}
+
+/** Status as a drop-down, colored to match the status. */
+export function StatusSelect({
+  status,
+  onChange,
+  id,
+  compact = false,
+  label = "Status",
+}: {
+  status: StatusKey;
+  onChange: (s: StatusKey) => void;
+  id?: string;
+  compact?: boolean;
+  label?: string;
+}) {
+  const s = statusDef(status);
+  return (
+    <span className={"status-select" + (compact ? " compact" : "")} style={{ ["--s" as string]: s.hsl, ["--st" as string]: s.text }}>
+      <span className="status-dot" style={{ background: s.text }} aria-hidden="true" />
+      <select id={id} aria-label={id ? undefined : label} value={status} onChange={(e) => onChange(e.target.value as StatusKey)}>
+        {STATUSES.map((o) => (
+          <option key={o.key} value={o.key}>{o.label}</option>
+        ))}
+      </select>
     </span>
   );
 }

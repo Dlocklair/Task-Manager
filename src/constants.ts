@@ -1,4 +1,4 @@
-import type { PriorityKey, StatusKey } from "./types";
+import type { DueFilter, Filters, PriorityKey, SortKey, StatusFilter, StatusKey } from "./types";
 
 export interface StatusDef {
   key: StatusKey;
@@ -12,11 +12,11 @@ export interface StatusDef {
 export const STATUSES: StatusDef[] = [
   { key: "todo", label: "To do", hsl: "270 70% 66%", text: "hsl(270 70% 72%)" },
   { key: "progress", label: "In progress", hsl: "210 90% 62%", text: "hsl(210 90% 66%)" },
-  { key: "review", label: "In review", hsl: "330 75% 62%", text: "hsl(330 75% 68%)" },
   { key: "done", label: "Done", hsl: "150 60% 45%", text: "hsl(150 60% 52%)" },
 ];
 
 export const statusDef = (key: StatusKey) => STATUSES.find((s) => s.key === key) ?? STATUSES[0];
+export const STATUS_RANK: Record<StatusKey, number> = { todo: 0, progress: 1, done: 2 };
 
 export interface PriorityDef {
   key: PriorityKey;
@@ -35,6 +35,39 @@ export const PRIORITIES: PriorityDef[] = [
 ];
 
 export const priorityDef = (key: PriorityKey) => PRIORITIES.find((p) => p.key === key) ?? PRIORITIES[2];
+
+export const DUE_OPTIONS: { key: DueFilter; label: string }[] = [
+  { key: "any", label: "Any due date" },
+  { key: "overdue", label: "Overdue" },
+  { key: "today", label: "Due today" },
+  { key: "week", label: "Due in the next 7 days" },
+  { key: "nodate", label: "No due date" },
+];
+
+export const STATUS_FILTER_OPTIONS: { key: StatusFilter; label: string }[] = [
+  { key: "any", label: "Any status" },
+  { key: "open", label: "Not done" },
+  { key: "todo", label: "To do" },
+  { key: "progress", label: "In progress" },
+  { key: "done", label: "Done" },
+];
+
+export const SORT_OPTIONS: { key: SortKey; label: string }[] = [
+  { key: "priority", label: "Priority" },
+  { key: "due", label: "Due date" },
+  { key: "status", label: "Status" },
+  { key: "project", label: "Project" },
+];
+
+export const DEFAULT_FILTERS: Filters = {
+  projectId: null,
+  due: "any",
+  status: "any",
+  priorities: [],
+  query: "",
+  sort: "priority",
+  dir: "asc",
+};
 
 /** Project palette — distinct hues that read on the dark surface. */
 export const PROJECT_COLORS: { name: string; hsl: string }[] = [

@@ -1,4 +1,5 @@
-import type { AppData, PriorityKey, Project, StatusKey, Task } from "./types";
+import type { AppData, PriorityKey, Project, SavedView, StatusKey, Task } from "./types";
+import { DEFAULT_FILTERS } from "./constants";
 import { addDays, todayIso, uid } from "./utils";
 
 /** Sample workspace so the app isn't empty on first open. Dates are relative to today. */
@@ -12,6 +13,7 @@ export function sampleData(): AppData {
   const office = p("Office move", "95 55% 55%");
   const client = p("Client onboarding", "235 80% 72%");
 
+  let n = 0;
   const t = (
     project: Project,
     title: string,
@@ -33,12 +35,25 @@ export function sampleData(): AppData {
     owner,
     subtasks: subs.map(([title, done]) => ({ id: uid(), title, done })),
     notes: notes.map((text, i) => ({ id: uid(), text, createdAt: now - (notes.length - i) * 3_600_000 })),
+    order: n++,
     createdAt: now,
     completedAt: status === "done" ? now : null,
   });
 
+  const view = (name: string, f: Partial<SavedView["filters"]>): SavedView => ({
+    id: uid(),
+    name,
+    filters: { ...DEFAULT_FILTERS, ...f },
+    createdAt: now,
+  });
+
   return {
-    version: 1,
+    version: 2,
+    savedViews: [
+      view("High priority due today", { priorities: ["urgent", "high"], due: "today" }),
+      view("Overdue — all projects", { due: "overdue" }),
+      view("This week, by due date", { due: "week", sort: "due" }),
+    ],
     projects: [web, q4, hire, office, client],
     tasks: [
       t(web, "Finalize homepage wireframes", "progress", "high", 0, "Priya Shah",
@@ -48,7 +63,7 @@ export function sampleData(): AppData {
       t(web, "Write launch announcement copy", "todo", "medium", 4, "Sam Chen",
         "Short post for the blog and a matching email to existing customers.",
         [["Blog post draft", false], ["Email version", false]]),
-      t(web, "QA checkout flow on mobile", "review", "urgent", -3, "Jordan Lee",
+      t(web, "QA checkout flow on mobile", "progress", "urgent", -3, "Jordan Lee",
         "Test payment, address and confirmation steps on iOS and Android before sign-off.",
         [["iOS Safari", true], ["Android Chrome", true], ["Saved cards", true], ["Promo codes", false]],
         ["Promo code field clears on back navigation — logged as a bug."]),
@@ -57,7 +72,7 @@ export function sampleData(): AppData {
         [["Pull actuals", true], ["Department estimates", false], ["Summary slide", false]]),
       t(q4, "Collect department headcount requests", "todo", "high", -4, "Alex Rivera",
         "Each lead submits planned hires and backfills for next quarter."),
-      t(q4, "Review vendor contracts", "review", "medium", 3, "David L.",
+      t(q4, "Review vendor contracts", "progress", "medium", 3, "David L.",
         "Check renewal dates and pricing changes on the three largest vendors.",
         [["Software licenses", true], ["Facilities", true]]),
       t(hire, "Schedule interviews for design lead", "progress", "medium", 2, "Priya Shah",
@@ -72,7 +87,7 @@ export function sampleData(): AppData {
         "Group desks by team and leave space for two meeting rooms."),
       t(client, "Send welcome kit to Northwind", "done", "medium", -3, "Priya Shah",
         "Kit shipped with login details and the getting-started guide."),
-      t(client, "Set up onboarding call series", "review", "high", 0, "David L.",
+      t(client, "Set up onboarding call series", "progress", "high", 0, "David L.",
         "Three 30-minute calls covering setup, reporting and admin settings.",
         [["Agenda", true], ["Calendar holds", false]]),
       t(client, "Update FAQ for new customers", "done", "low", -6, "Sam Chen",
@@ -83,8 +98,9 @@ export function sampleData(): AppData {
 
 export function emptyData(): AppData {
   return {
-    version: 1,
+    version: 2,
     projects: [{ id: uid(), name: "General", color: "191 80% 58%", createdAt: Date.now() }],
     tasks: [],
+    savedViews: [],
   };
 }

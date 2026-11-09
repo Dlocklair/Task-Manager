@@ -1,4 +1,4 @@
-export type StatusKey = "todo" | "progress" | "review" | "done";
+export type StatusKey = "todo" | "progress" | "done";
 export type PriorityKey = "urgent" | "high" | "medium" | "low";
 
 export interface Project {
@@ -33,24 +33,40 @@ export interface Task {
   owner: string;
   subtasks: Subtask[];
   notes: Note[];
+  /** Manual position among tasks of the same priority (lower = higher up). */
+  order: number;
   createdAt: number;
   completedAt: number | null;
 }
 
-export interface AppData {
-  version: 1;
-  projects: Project[];
-  tasks: Task[];
-}
+export type DueFilter = "any" | "overdue" | "today" | "week" | "nodate";
+export type StatusFilter = "any" | "open" | StatusKey;
+export type SortKey = "priority" | "due" | "status" | "project";
+export type SortDir = "asc" | "desc";
 
-export type QuickFilter = "overdue" | "today" | "progress" | "done" | null;
-
-export interface ViewState {
+/** Everything a saved view remembers. */
+export interface Filters {
   /** null = all projects */
   projectId: string | null;
-  quick: QuickFilter;
-  priority: PriorityKey | null;
+  due: DueFilter;
+  status: StatusFilter;
+  /** empty = any priority */
+  priorities: PriorityKey[];
   query: string;
-  view: "board" | "list";
-  selectedTaskId: string | null;
+  sort: SortKey;
+  dir: SortDir;
+}
+
+export interface SavedView {
+  id: string;
+  name: string;
+  filters: Filters;
+  createdAt: number;
+}
+
+export interface AppData {
+  version: 2;
+  projects: Project[];
+  tasks: Task[];
+  savedViews: SavedView[];
 }

@@ -1,12 +1,18 @@
 import { useRef } from "react";
-import { Download, LayoutGrid, ListChecks, Pencil, Plus, RotateCcw, Upload } from "lucide-react";
-import type { Project, Task } from "../types";
+import { Bookmark, BookmarkPlus, Download, LayoutGrid, ListChecks, Pencil, Plus, RotateCcw, Upload } from "lucide-react";
+import type { Project, SavedView, Task } from "../types";
 
 interface Props {
   projects: Project[];
   tasks: Task[];
   selectedProjectId: string | null;
   onSelectProject: (id: string | null) => void;
+  savedViews: SavedView[];
+  activeViewId: string | null;
+  viewCount: (v: SavedView) => number;
+  onApplyView: (v: SavedView) => void;
+  onEditView: (v: SavedView) => void;
+  onSaveView: () => void;
   onNewProject: () => void;
   onEditProject: (p: Project) => void;
   onExport: () => void;
@@ -41,6 +47,40 @@ export function Sidebar(props: Props) {
           <span className="count">{openCount()}</span>
         </button>
       </nav>
+
+      <div>
+        <div className="section-label">
+          <span>Saved views</span>
+          <button type="button" className="tiny-btn" onClick={props.onSaveView} aria-label="Save current view" title="Save the filters on screen as a view">
+            <BookmarkPlus size={16} aria-hidden="true" />
+          </button>
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 2 }} data-testid="saved-views">
+          {props.savedViews.map((v) => {
+            const active = props.activeViewId === v.id;
+            return (
+              <div className="project-row" key={v.id}>
+                <button
+                  type="button"
+                  className={"nav-item tall" + (active ? " active" : "")}
+                  aria-current={active ? "page" : undefined}
+                  onClick={() => props.onApplyView(v)}
+                >
+                  <Bookmark size={16} aria-hidden="true" style={{ flexShrink: 0 }} />
+                  <span className="grow wrap">{v.name}</span>
+                  <span className="count">{props.viewCount(v)}</span>
+                </button>
+                <button type="button" className="tiny-btn edit-btn" onClick={() => props.onEditView(v)} aria-label={`Edit saved view ${v.name}`} title="Edit saved view">
+                  <Pencil size={14} aria-hidden="true" />
+                </button>
+              </div>
+            );
+          })}
+          {props.savedViews.length === 0 && (
+            <p className="meta" style={{ margin: "0 12px 4px" }}>Set filters, then save them here to come back in one click.</p>
+          )}
+        </div>
+      </div>
 
       <div>
         <div className="section-label">

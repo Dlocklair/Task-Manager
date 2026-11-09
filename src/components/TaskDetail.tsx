@@ -2,8 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { ArrowDown, ArrowUp, CheckCircle2, ListChecks, NotebookPen, Pencil, Plus, RotateCcw, Trash2, X } from "lucide-react";
 import type { Project, Task } from "../types";
 import type { Action } from "../store";
-import { PRIORITIES, STATUSES } from "../constants";
-import { DueBadge, PriorityBars, ProjectPill } from "./bits";
+import { PRIORITIES } from "../constants";
+import { DueBadge, PriorityBars, ProjectPill, StatusSelect } from "./bits";
 import { formatTimestamp } from "../utils";
 
 interface Props {
@@ -76,30 +76,12 @@ export function TaskDetail({ task, projects, dispatch, onClose, onDelete }: Prop
       </div>
 
       <div className="detail-section">
-        <span className="label" id="td-status-label">Status</span>
-        <div className="status-grid" role="group" aria-labelledby="td-status-label">
-          {STATUSES.map((s) => {
-            const on = task.status === s.key;
-            return (
-              <button
-                key={s.key}
-                type="button"
-                className="status-btn"
-                aria-pressed={on}
-                onClick={() => dispatch({ type: "setStatus", id: task.id, status: s.key })}
-                style={on ? { background: `hsl(${s.hsl} / 0.16)`, borderColor: s.text, color: s.text } : undefined}
-              >
-                <span className="status-dot" style={{ width: 9, height: 9, background: s.text }} />
-                {s.label}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      <div className="detail-section">
         <div className="prop-grid">
-          <div className="field full">
+          <div className="field">
+            <label htmlFor="td-status">Status</label>
+            <StatusSelect id="td-status" status={task.status} onChange={(status) => dispatch({ type: "setStatus", id: task.id, status })} />
+          </div>
+          <div className="field">
             <label htmlFor="td-project">Project</label>
             <select id="td-project" className="select" value={task.projectId} onChange={(e) => update({ projectId: e.target.value })}>
               {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}

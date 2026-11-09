@@ -1,11 +1,12 @@
 import { useCallback, useMemo, useState } from "react";
-import { Activity, AlertTriangle, CheckCircle2, Clock, Kanban, List, Plus, Search, X } from "lucide-react";
+import { Activity, AlertTriangle, ArrowDownWideNarrow, ArrowUpNarrowWide, BookmarkPlus, CheckCircle2, Clock, Kanban, List, Plus, Search, X } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import type { PriorityKey, Project, QuickFilter, StatusKey, Task, ViewState } from "./types";
-import { PRIORITIES, priorityDef } from "./constants";
+import type { Filters, Project, SavedView, SortKey, StatusKey, Task } from "./types";
+import { DEFAULT_FILTERS, DUE_OPTIONS, PRIORITIES, SORT_OPTIONS, STATUS_FILTER_OPTIONS } from "./constants";
 import { newTask, parseData, useAppData } from "./store";
 import { emptyData, sampleData } from "./sample";
-import { daysFromToday, longToday, plural, uid } from "./utils";
+import { describeFilters, filtersEqual, hasActiveFilters, matchesFilters, sortTasks } from "./filters";
+import { longToday, plural, uid } from "./utils";
 import { Sidebar } from "./components/Sidebar";
 import { Board } from "./components/Board";
 import { ListView } from "./components/ListView";
@@ -13,12 +14,14 @@ import { TaskDetail } from "./components/TaskDetail";
 import { AddTaskDialog } from "./components/AddTaskDialog";
 import type { NewTaskInput } from "./components/AddTaskDialog";
 import { ProjectDialog } from "./components/ProjectDialog";
+import { SavedViewDialog } from "./components/SavedViewDialog";
 import { Dialog } from "./components/Dialog";
 import { PriorityBars } from "./components/bits";
 
 type DialogState =
   | { kind: "addTask"; status?: StatusKey }
   | { kind: "project"; project?: Project }
+  | { kind: "savedView"; view?: SavedView }
   | { kind: "reset" }
   | { kind: "export" }
   | null;
@@ -28,11 +31,12 @@ interface Toast {
   undo?: () => void;
 }
 
-const QUICK: { key: Exclude<QuickFilter, null>; label: string; hsl: string; text: string; Icon: LucideIcon; test: (t: Task) => boolean }[] = [
-  { key: "overdue", label: "Overdue", hsl: "0 84% 60%", text: "hsl(0 84% 68%)", Icon: AlertTriangle, test: (t) => t.status !== "done" && !!t.due && daysFromToday(t.due) < 0 },
-  { key: "today", label: "Due today", hsl: "38 92% 50%", text: "hsl(38 92% 58%)", Icon: Clock, test: (t) => t.status !== "done" && !!t.due && daysFromToday(t.due) === 0 },
-  { key: "progress", label: "In progress", hsl: "210 90% 62%", text: "hsl(210 90% 66%)", Icon: Activity, test: (t) => t.status === "progress" },
-  { key: "done", label: "Completed", hsl: "150 60% 45%", text: "hsl(150 60% 52%)", Icon: CheckCircle2, test: (t) => t.status === "done" },
+/** Summary tiles: each one sets the due-date or status filter, so they combine with priority and project. */
+const TILES: { id: string; label: string; hsl: string; text: string; Icon: LucideIcon; patch: Partial<Filters>; isOn: (f: Filters) => boolean }[] = [
+  { id: "overdue", label: "Overdue", hsl: "0 84% 60%", text: "hsl(0 84% 68%)", Icon: AlertTriangle, patch: { due: "overdue" }, isOn: (f) => f.due === "overdue" },
+  { id: "today", label: "Due today", hsl: "38 92% 50%", text: "hsl(38 92% 58%)", Icon: Clock, patch: { due: "today" }, isOn: (f) => f.due === "today" },
+  { id: "progress", label: "In progress", hsl: "210 90% 62%", text: "hsl(210 90% 66%)", Icon: Activity, patch: { status: "progress" }, isOn: (f) => f.status === "progress" },
+  { id: "done", label: "Completed", hsl: "150 60% 45%", text: "hsl(150 60% 52%)", Icon: CheckCircle2, patch: { status: "done" }, isOn: (f) => f.status === "done" },
 ];
 
 /** Embedded previews (e.g. a shared link viewer) block file downloads, so only offer Copy there. */
@@ -46,55 +50,55 @@ const inFrame = (() => {
 
 export default function App() {
   const [data, dispatch] = useAppData();
-  const [vs, setVs] = useState<ViewState>({ projectId: null, quick: null, priority: null, query: "", view: "board", selectedTaskId: null });
+  const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
+  const [view, setView] = useState<"board" | "list">("board");
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+  const [appliedViewId, setAppliedViewId] = useState<string | null>(null);
   const [lastProjectId, setLastProjectId] = useState<string | null>(null);
   const [dialog, setDialog] = useState<DialogState>(null);
   const [toast, setToast] = useState<Toast | null>(null);
-  const set = (patch: Partial<ViewState>) => setVs((v) => ({ ...v, ...patch }));
+  const patch = (p: Partial<Filters>) => setFilters((f) => ({ ...f, ...p }));
 
   const showToast = useCallback((t: Toast) => {
     setToast(t);
     window.setTimeout(() => setToast((cur) => (cur === t ? null : cur)), 6000);
   }, []);
 
-  const { projects, tasks } = data;
-  const selectedProject = projects.find((p) => p.id === vs.projectId);
+  const { projects, tasks, savedViews } = data;
+  const selectedProject = projects.find((p) => p.id === filters.projectId);
   /** New tasks go into the selected project; with "All projects" open, the last project used (or the first). */
   const defaultProject = selectedProject ?? projects.find((p) => p.id === lastProjectId) ?? projects[0];
 
-  const scoped = useMemo(() => (vs.projectId ? tasks.filter((t) => t.projectId === vs.projectId) : tasks), [tasks, vs.projectId]);
+  const scoped = useMemo(() => (filters.projectId ? tasks.filter((t) => t.projectId === filters.projectId) : tasks), [tasks, filters.projectId]);
+  const visible = useMemo(
+    () => sortTasks(tasks.filter((t) => matchesFilters(t, filters, projects)), filters.sort, filters.dir, projects),
+    [tasks, filters, projects],
+  );
 
-  const visible = useMemo(() => {
-    const q = vs.query.trim().toLowerCase();
-    const quick = QUICK.find((x) => x.key === vs.quick);
-    return scoped
-      .filter((t) => (quick ? quick.test(t) : true))
-      .filter((t) => (vs.priority ? t.priority === vs.priority : true))
-      .filter((t) => {
-        if (!q) return true;
-        const pName = projects.find((p) => p.id === t.projectId)?.name ?? "";
-        return [t.title, t.description, t.owner, pName, ...t.subtasks.map((s) => s.title), ...t.notes.map((n) => n.text)]
-          .join(" ")
-          .toLowerCase()
-          .includes(q);
-      })
-      .sort((a, b) => {
-        const pa = priorityDef(a.priority).level, pb = priorityDef(b.priority).level;
-        if (pa !== pb) return pb - pa;
-        const da = a.due ? daysFromToday(a.due) : 1e9, db = b.due ? daysFromToday(b.due) : 1e9;
-        return da - db || b.createdAt - a.createdAt;
-      });
-  }, [scoped, vs.quick, vs.priority, vs.query, projects]);
+  const appliedView = savedViews.find((v) => v.id === appliedViewId) ?? null;
+  const activeView =
+    (appliedView && filtersEqual(appliedView.filters, filters) ? appliedView : savedViews.find((v) => filtersEqual(v.filters, filters))) ?? null;
+  const viewModified = !!appliedView && !activeView;
+  const narrowing = hasActiveFilters(filters);
+  const selectedTask = tasks.find((t) => t.id === selectedTaskId) ?? null;
 
-  const selectedTask = tasks.find((t) => t.id === vs.selectedTaskId) ?? null;
-  const anyFilter = !!(vs.quick || vs.priority || vs.query.trim());
+  const applyView = (v: SavedView) => {
+    setFilters({ ...DEFAULT_FILTERS, ...v.filters, projectId: projects.some((p) => p.id === v.filters.projectId) ? v.filters.projectId : null });
+    setAppliedViewId(v.id);
+    setSelectedTaskId(null);
+  };
+
+  const setSort = (key: SortKey) =>
+    setFilters((f) => (f.sort === key ? { ...f, dir: f.dir === "asc" ? "desc" : "asc" } : { ...f, sort: key, dir: "asc" }));
 
   const createTask = (input: NewTaskInput) => {
-    const task = newTask(input);
+    const task = newTask(input, tasks);
     task.subtasks = input.subtasks.map((title) => ({ id: uid(), title, done: false }));
     dispatch({ type: "addTask", task });
     setLastProjectId(input.projectId);
-    set({ selectedTaskId: task.id, quick: null, priority: null, query: "" });
+    // Make sure the new task is visible: keep the project, drop the narrowing filters.
+    if (!matchesFilters(task, filters, projects)) setFilters((f) => ({ ...DEFAULT_FILTERS, projectId: f.projectId, sort: f.sort, dir: f.dir }));
+    setSelectedTaskId(task.id);
     setDialog(null);
     const pName = projects.find((p) => p.id === input.projectId)?.name;
     showToast({ text: `Added “${task.title}” to ${pName}` });
@@ -105,15 +109,16 @@ export default function App() {
       setDialog({ kind: "project" });
       return;
     }
-    const task = newTask({ title, status, projectId: defaultProject.id });
+    const task = newTask({ title, status, projectId: defaultProject.id }, tasks);
     dispatch({ type: "addTask", task });
     setLastProjectId(defaultProject.id);
-    set({ selectedTaskId: task.id });
+    if (!matchesFilters(task, filters, projects)) setFilters((f) => ({ ...DEFAULT_FILTERS, projectId: f.projectId, sort: f.sort, dir: f.dir }));
+    setSelectedTaskId(task.id);
   };
 
   const deleteTask = (task: Task) => {
     dispatch({ type: "deleteTask", id: task.id });
-    set({ selectedTaskId: null });
+    setSelectedTaskId(null);
     showToast({ text: `Deleted “${task.title}”`, undo: () => dispatch({ type: "addTask", task }) });
   };
 
@@ -138,20 +143,38 @@ export default function App() {
       }
       const prev = data;
       dispatch({ type: "replaceAll", data: d });
-      set({ projectId: null, selectedTaskId: null });
+      setFilters(DEFAULT_FILTERS);
+      setSelectedTaskId(null);
       showToast({ text: `Imported ${plural(d.tasks.length, "task")} in ${plural(d.projects.length, "project")}`, undo: () => dispatch({ type: "replaceAll", data: prev }) });
     });
   };
 
+  const resetTo = (next: typeof data, text: string) => {
+    const prev = data;
+    dispatch({ type: "replaceAll", data: next });
+    setFilters(DEFAULT_FILTERS);
+    setSelectedTaskId(null);
+    setAppliedViewId(null);
+    setDialog(null);
+    showToast({ text, undo: () => dispatch({ type: "replaceAll", data: prev }) });
+  };
+
   const openCount = scoped.filter((t) => t.status !== "done").length;
+  const heading = activeView ? activeView.name : selectedProject ? selectedProject.name : "All projects";
 
   return (
     <div className="shell">
       <Sidebar
         projects={projects}
         tasks={tasks}
-        selectedProjectId={vs.projectId}
-        onSelectProject={(id) => set({ projectId: id, selectedTaskId: null })}
+        selectedProjectId={filters.projectId}
+        onSelectProject={(id) => { patch({ projectId: id }); setSelectedTaskId(null); setAppliedViewId(null); }}
+        savedViews={savedViews}
+        activeViewId={activeView?.id ?? null}
+        viewCount={(v) => tasks.filter((t) => matchesFilters(t, v.filters, projects)).length}
+        onApplyView={applyView}
+        onEditView={(v) => setDialog({ kind: "savedView", view: v })}
+        onSaveView={() => setDialog({ kind: "savedView" })}
         onNewProject={() => setDialog({ kind: "project" })}
         onEditProject={(p) => setDialog({ kind: "project", project: p })}
         onExport={() => setDialog({ kind: "export" })}
@@ -161,22 +184,25 @@ export default function App() {
 
       <main className="main">
         <header className="page-head">
-          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 4, minWidth: 0 }}>
             <span className="meta" style={{ fontWeight: 500 }}>{longToday()}</span>
             <h1 className="page-title">
-              {selectedProject && <span className="project-swatch" style={{ width: 16, height: 16, borderRadius: 4, background: `hsl(${selectedProject.color})` }} />}
-              {selectedProject ? selectedProject.name : "All projects"}
+              {!activeView && selectedProject && <span className="project-swatch" style={{ width: 16, height: 16, borderRadius: 4, background: `hsl(${selectedProject.color})` }} />}
+              {heading}
             </h1>
             <span className="meta">
-              {plural(openCount, "open task")}
-              {selectedProject ? " · New tasks are added to this project" : ` across ${plural(projects.length, "project")}`}
+              {activeView || narrowing
+                ? describeFilters(filters, projects)
+                : selectedProject
+                  ? `${plural(openCount, "open task")} · New tasks are added to this project`
+                  : `${plural(openCount, "open task")} across ${plural(projects.length, "project")}`}
             </span>
           </div>
           <div className="head-actions">
             <div className="search">
               <Search size={16} aria-hidden="true" />
               <label className="sr-only" htmlFor="search">Search tasks</label>
-              <input id="search" type="search" className="input" placeholder="Search tasks, subtasks, notes" value={vs.query} onChange={(e) => set({ query: e.target.value })} />
+              <input id="search" type="search" className="input" placeholder="Search tasks, subtasks, notes" value={filters.query} onChange={(e) => patch({ query: e.target.value })} />
             </div>
             <button type="button" className="btn btn-primary" onClick={() => (projects.length ? setDialog({ kind: "addTask" }) : setDialog({ kind: "project" }))}>
               <Plus size={16} aria-hidden="true" />Add Task
@@ -185,22 +211,26 @@ export default function App() {
         </header>
 
         <section className="stats" aria-label="Summary — select a tile to filter">
-          {QUICK.map((q) => {
-            const on = vs.quick === q.key;
+          {TILES.map((q) => {
+            const on = q.isOn(filters);
+            const count = scoped.filter((t) => matchesFilters(t, { ...DEFAULT_FILTERS, projectId: filters.projectId, ...q.patch }, projects)).length;
             return (
               <button
-                key={q.key}
+                key={q.id}
                 type="button"
                 className={"stat" + (on ? " active" : "")}
                 aria-pressed={on}
                 style={on ? { borderColor: `hsl(${q.hsl})` } : undefined}
-                onClick={() => set({ quick: on ? null : q.key })}
+                onClick={() => {
+                  if (on) patch(q.patch.due ? { due: "any" } : { status: "any" });
+                  else patch(q.patch);
+                }}
               >
                 <span className="stat-icon" style={{ background: `hsl(${q.hsl} / 0.15)`, color: q.text }}>
                   <q.Icon size={20} aria-hidden="true" />
                 </span>
                 <span>
-                  <span className="stat-num">{scoped.filter(q.test).length}</span>
+                  <span className="stat-num">{count}</span>
                   <span className="stat-label" style={{ color: q.text }}>{q.label}</span>
                 </span>
               </button>
@@ -209,36 +239,83 @@ export default function App() {
         </section>
 
         <div className="toolbar">
-          <div className="segmented" role="group" aria-label="View">
-            <button type="button" aria-pressed={vs.view === "board"} onClick={() => set({ view: "board" })}><Kanban size={16} aria-hidden="true" />Board</button>
-            <button type="button" aria-pressed={vs.view === "list"} onClick={() => set({ view: "list" })}><List size={16} aria-hidden="true" />List</button>
-          </div>
-          <div className="chips">
-            <span className="meta" style={{ fontWeight: 500, marginRight: 4 }}>Priority</span>
-            {PRIORITIES.map((p) => {
-              const on = vs.priority === p.key;
-              return (
-                <button
-                  key={p.key}
-                  type="button"
-                  className="chip"
-                  aria-pressed={on}
-                  onClick={() => set({ priority: on ? null : (p.key as PriorityKey) })}
-                  style={on ? { background: p.bg, borderColor: p.text, color: p.text } : undefined}
-                >
-                  <PriorityBars priority={p.key} />
-                  {p.label}
-                </button>
-              );
-            })}
-            {anyFilter && (
-              <button type="button" className="btn btn-ghost btn-sm" onClick={() => set({ quick: null, priority: null, query: "" })}>
-                <X size={14} aria-hidden="true" />Clear filters
+          <div className="toolbar-row">
+            <div className="segmented" role="group" aria-label="View">
+              <button type="button" aria-pressed={view === "board"} onClick={() => setView("board")}><Kanban size={16} aria-hidden="true" />Board</button>
+              <button type="button" aria-pressed={view === "list"} onClick={() => setView("list")}><List size={16} aria-hidden="true" />List</button>
+            </div>
+            <div className="toolbar-group">
+              <label className="meta" htmlFor="sort" style={{ fontWeight: 500 }}>Sort by</label>
+              <select id="sort" className="select select-sm" value={filters.sort} onChange={(e) => patch({ sort: e.target.value as SortKey, dir: "asc" })}>
+                {SORT_OPTIONS.map((o) => <option key={o.key} value={o.key}>{o.label}</option>)}
+              </select>
+              <button
+                type="button"
+                className="btn btn-outline btn-icon"
+                onClick={() => patch({ dir: filters.dir === "asc" ? "desc" : "asc" })}
+                aria-label={filters.dir === "asc" ? "Sort order: normal. Select to reverse." : "Sort order: reversed. Select to restore."}
+                title="Reverse sort order"
+              >
+                {filters.dir === "asc" ? <ArrowDownWideNarrow size={16} aria-hidden="true" /> : <ArrowUpNarrowWide size={16} aria-hidden="true" />}
               </button>
-            )}
+              <button type="button" className="btn btn-outline btn-sm" onClick={() => setDialog({ kind: "savedView" })}>
+                <BookmarkPlus size={15} aria-hidden="true" />Save view
+              </button>
+            </div>
+          </div>
+          <div className="toolbar-row">
+            <div className="chips" role="group" aria-label="Priority filter">
+              <span className="meta" style={{ fontWeight: 500, marginRight: 4 }}>Priority</span>
+              {PRIORITIES.map((p) => {
+                const on = filters.priorities.includes(p.key);
+                return (
+                  <button
+                    key={p.key}
+                    type="button"
+                    className="chip"
+                    aria-pressed={on}
+                    onClick={() => patch({ priorities: on ? filters.priorities.filter((x) => x !== p.key) : [...filters.priorities, p.key] })}
+                    style={on ? { background: p.bg, borderColor: p.text, color: p.text } : undefined}
+                  >
+                    <PriorityBars priority={p.key} />
+                    {p.label}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="toolbar-group">
+              <label className="sr-only" htmlFor="f-due">Due date filter</label>
+              <select id="f-due" className={"select select-sm" + (filters.due !== "any" ? " is-set" : "")} value={filters.due} onChange={(e) => patch({ due: e.target.value as Filters["due"] })}>
+                {DUE_OPTIONS.map((o) => <option key={o.key} value={o.key}>{o.label}</option>)}
+              </select>
+              <label className="sr-only" htmlFor="f-status">Status filter</label>
+              <select id="f-status" className={"select select-sm" + (filters.status !== "any" ? " is-set" : "")} value={filters.status} onChange={(e) => patch({ status: e.target.value as Filters["status"] })}>
+                {STATUS_FILTER_OPTIONS.map((o) => <option key={o.key} value={o.key}>{o.label}</option>)}
+              </select>
+              {narrowing && (
+                <button type="button" className="btn btn-ghost btn-sm" onClick={() => { setFilters((f) => ({ ...DEFAULT_FILTERS, projectId: f.projectId, sort: f.sort, dir: f.dir })); setAppliedViewId(null); }}>
+                  <X size={14} aria-hidden="true" />Clear filters
+                </button>
+              )}
+            </div>
           </div>
         </div>
-        {anyFilter && <p className="meta filter-note">Showing {visible.length} of {scoped.length} tasks</p>}
+
+        {(narrowing || viewModified) && (
+          <p className="meta filter-note">
+            Showing {visible.length} of {scoped.length} tasks
+            {viewModified && appliedView && (
+              <>
+                {" · "}Changed from “{appliedView.name}”{" "}
+                <button type="button" className="link-btn" onClick={() => { dispatch({ type: "updateSavedView", id: appliedView.id, patch: { filters } }); showToast({ text: `Updated “${appliedView.name}”` }); }}>
+                  Update view
+                </button>
+                {" · "}
+                <button type="button" className="link-btn" onClick={() => applyView(appliedView)}>Revert</button>
+              </>
+            )}
+          </p>
+        )}
 
         <div className="content">
           <div className="content-main">
@@ -250,19 +327,31 @@ export default function App() {
                   <Plus size={16} aria-hidden="true" />New project
                 </button>
               </div>
-            ) : vs.view === "board" ? (
+            ) : view === "board" ? (
               <Board
                 tasks={visible}
                 projects={projects}
-                selectedTaskId={vs.selectedTaskId}
+                selectedTaskId={selectedTaskId}
                 showProject={!selectedProject}
+                sort={filters.sort}
                 quickAddProject={defaultProject}
-                onSelect={(id) => set({ selectedTaskId: id })}
+                onSelect={setSelectedTaskId}
                 onMove={(id, status) => dispatch({ type: "setStatus", id, status })}
+                onReorder={(id, targetId, place) => dispatch({ type: "reorder", id, targetId, place })}
                 onQuickAdd={quickAdd}
               />
             ) : (
-              <ListView tasks={visible} projects={projects} selectedTaskId={vs.selectedTaskId} onSelect={(id) => set({ selectedTaskId: id })} />
+              <ListView
+                tasks={visible}
+                projects={projects}
+                selectedTaskId={selectedTaskId}
+                sort={filters.sort}
+                dir={filters.dir}
+                onSort={setSort}
+                onSelect={setSelectedTaskId}
+                onStatus={(id, status) => dispatch({ type: "setStatus", id, status })}
+                onReorder={(id, targetId, place) => dispatch({ type: "reorder", id, targetId, place })}
+              />
             )}
           </div>
 
@@ -272,7 +361,7 @@ export default function App() {
               task={selectedTask}
               projects={projects}
               dispatch={dispatch}
-              onClose={() => set({ selectedTaskId: null })}
+              onClose={() => setSelectedTaskId(null)}
               onDelete={() => deleteTask(selectedTask)}
             />
           ) : null}
@@ -281,6 +370,37 @@ export default function App() {
 
       {dialog?.kind === "addTask" && (
         <AddTaskDialog projects={projects} defaultProjectId={selectedProject?.id ?? null} defaultStatus={dialog.status} onCreate={createTask} onClose={() => setDialog(null)} />
+      )}
+      {dialog?.kind === "savedView" && (
+        <SavedViewDialog
+          view={dialog.view}
+          current={filters}
+          projects={projects}
+          onClose={() => setDialog(null)}
+          onSave={(name, f) => {
+            if (dialog.view) {
+              dispatch({ type: "updateSavedView", id: dialog.view.id, patch: { name, filters: f } });
+              showToast({ text: `Updated “${name}”` });
+            } else {
+              const v: SavedView = { id: uid(), name, filters: f, createdAt: Date.now() };
+              dispatch({ type: "addSavedView", view: v });
+              setAppliedViewId(v.id);
+              showToast({ text: `Saved “${name}” — find it in the sidebar` });
+            }
+            setDialog(null);
+          }}
+          onDelete={
+            dialog.view
+              ? () => {
+                  const v = dialog.view!;
+                  dispatch({ type: "deleteSavedView", id: v.id });
+                  if (appliedViewId === v.id) setAppliedViewId(null);
+                  setDialog(null);
+                  showToast({ text: `Deleted “${v.name}”`, undo: () => dispatch({ type: "addSavedView", view: v }) });
+                }
+              : undefined
+          }
+        />
       )}
       {dialog?.kind === "project" && (
         <ProjectDialog
@@ -293,7 +413,8 @@ export default function App() {
             } else {
               const project: Project = { id: uid(), name, color, createdAt: Date.now() };
               dispatch({ type: "addProject", project });
-              set({ projectId: project.id, selectedTaskId: null });
+              patch({ projectId: project.id });
+              setSelectedTaskId(null);
             }
             setDialog(null);
           }}
@@ -302,8 +423,8 @@ export default function App() {
               ? () => {
                   const id = dialog.project!.id;
                   dispatch({ type: "deleteProject", id });
-                  if (vs.projectId === id) set({ projectId: null });
-                  if (selectedTask?.projectId === id) set({ selectedTaskId: null });
+                  if (filters.projectId === id) patch({ projectId: null });
+                  if (selectedTask?.projectId === id) setSelectedTaskId(null);
                   setDialog(null);
                 }
               : undefined
@@ -312,7 +433,7 @@ export default function App() {
       )}
       {dialog?.kind === "export" && (
         <Dialog title="Export backup" onClose={() => setDialog(null)}>
-          <p className="muted" style={{ margin: 0 }}>Copy this text and save it somewhere safe. Use Import backup to restore it later or move your tasks to another browser.</p>
+          <p className="muted" style={{ margin: 0 }}>Copy this text and save it somewhere safe. Use Import backup to restore it later or move your tasks and saved views to another browser.</p>
           <textarea className="textarea" readOnly aria-label="Backup data" value={JSON.stringify(data, null, 2)} style={{ minHeight: 180, fontFamily: "ui-monospace, monospace", fontSize: 12 }} onFocus={(e) => e.target.select()} />
           <div className="dialog-actions">
             <button type="button" className="btn btn-ghost" onClick={() => setDialog(null)}>Close</button>
@@ -334,15 +455,11 @@ export default function App() {
       )}
       {dialog?.kind === "reset" && (
         <Dialog title="Reset workspace" onClose={() => setDialog(null)}>
-          <p className="muted" style={{ margin: 0 }}>This replaces everything saved in this browser. Export a backup first if you want to keep your current tasks.</p>
+          <p className="muted" style={{ margin: 0 }}>This replaces everything saved in this browser, including saved views. Export a backup first if you want to keep your current tasks.</p>
           <div className="dialog-actions">
             <button type="button" className="btn btn-ghost" onClick={() => setDialog(null)}>Cancel</button>
-            <button type="button" className="btn btn-outline" onClick={() => { const prev = data; dispatch({ type: "replaceAll", data: emptyData() }); set({ projectId: null, selectedTaskId: null }); setDialog(null); showToast({ text: "Started an empty workspace", undo: () => dispatch({ type: "replaceAll", data: prev }) }); }}>
-              Start empty
-            </button>
-            <button type="button" className="btn btn-primary" onClick={() => { const prev = data; dispatch({ type: "replaceAll", data: sampleData() }); set({ projectId: null, selectedTaskId: null }); setDialog(null); showToast({ text: "Loaded sample data", undo: () => dispatch({ type: "replaceAll", data: prev }) }); }}>
-              Load sample data
-            </button>
+            <button type="button" className="btn btn-outline" onClick={() => resetTo(emptyData(), "Started an empty workspace")}>Start empty</button>
+            <button type="button" className="btn btn-primary" onClick={() => resetTo(sampleData(), "Loaded sample data")}>Load sample data</button>
           </div>
         </Dialog>
       )}
