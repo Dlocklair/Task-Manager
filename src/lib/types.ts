@@ -8,6 +8,7 @@ export interface Project {
   description: string | null;
   color: string;
   position: number;
+  default_priority: Priority;
   created_at: string;
 }
 

@@ -3,8 +3,10 @@ import { ArrowLeft, CornerLeftUp, Trash2, X } from "lucide-react";
 import { useStore } from "../lib/store";
 import type { Note, Priority, Task } from "../lib/types";
 import { PRIORITIES, STATUSES, step, tint, uid } from "../lib/util";
+import { AssigneePicker } from "./AssigneePicker";
+import { RichEditor, RichField, RichView } from "./RichText";
 import { QuickAdd } from "./TaskList";
-import { Avatar, Check, DueBadge } from "./ui";
+import { Check, DueBadge } from "./ui";
 
 export function TaskDetail({ task }: { task: Task }) {
   const s = useStore();
@@ -12,7 +14,6 @@ export function TaskDetail({ task }: { task: Task }) {
   const parent = task.parent_task_id ? s.task(task.parent_task_id) : undefined;
   const kids = s.kids(task.id);
   const doneKids = kids.filter((k) => k.status === "done").length;
-  const assigned = new Set(s.assigned(task.id).map((p) => p.id));
   const current = step(task.status);
 
   useEffect(() => {
@@ -99,26 +100,16 @@ export function TaskDetail({ task }: { task: Task }) {
           </select>
 
           <label>Assigned to</label>
-          <div className="people-pick">
-            {s.data.people.map((p) => (
-              <button key={p.id} aria-pressed={assigned.has(p.id)} className={"person-chip" + (assigned.has(p.id) ? " on" : "")} onClick={() => s.toggleAssignee(task.id, p.id)}>
-                <Avatar person={p} size={22} />{p.full_name}
-              </button>
-            ))}
-          </div>
+          <AssigneePicker taskId={task.id} />
         </div>
 
         <section className="detail-section">
           <h3>Details</h3>
-          <textarea
-            className="desc"
-            rows={3}
-            defaultValue={task.description ?? ""}
-            placeholder="Add anything that helps get this done"
-            onBlur={(e) => {
-              const v = e.target.value.trim();
-              if (v !== (task.description ?? "")) s.updateTask(task.id, { description: v || null });
-            }}
+          <RichField
+            value={task.description ?? ""}
+            label="details"
+            placeholder="Add details, bullets or steps"
+            onSave={(v) => s.updateTask(task.id, { description: v })}
           />
         </section>
 
@@ -180,7 +171,7 @@ function Notes({ taskId }: { taskId: string }) {
       <div className="notes">
         {(notes ?? []).map((n) => (
           <div key={n.id} className="note">
-            <p>{n.body}</p>
+            <RichView text={n.body} />
             <footer>
               <time>{new Date(n.created_at).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</time>
               {n.author_id === s.data.userId && <button onClick={() => remove(n.id)}>Delete</button>}
@@ -189,13 +180,18 @@ function Notes({ taskId }: { taskId: string }) {
         ))}
       </div>
       <form className="note-form" onSubmit={add}>
-        <textarea
-          rows={2}
+        <RichEditor
           value={body}
-          onChange={(e) => setBody(e.target.value)}
-          placeholder="Write a note"
-          aria-label="Write a note"
-          onKeyDown={(e) => (e.metaKey || e.ctrlKey) && e.key === "Enter" && add(e)}
+          onChange={setBody}
+          rows={3}
+          placeholder="Write a note. Use the list buttons for bullets or numbers."
+          ariaLabel="Write a note"
+          onKeyDown={(e) => {
+            if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+              e.preventDefault();
+              add(e as unknown as FormEvent);
+            }
+          }}
         />
         <button className="btn" type="submit" disabled={!body.trim()}>Add note</button>
       </form>

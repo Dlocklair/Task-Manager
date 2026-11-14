@@ -17,7 +17,7 @@ function build(): Data {
     { id: "pr-lake", name: "Lake house turnover", color: COLORS[1] },
     { id: "pr-app", name: "Gift app launch", color: COLORS[6] },
     { id: "pr-taxes", name: "Taxes and paperwork", color: COLORS[3] },
-  ].map((p, i) => ({ ...p, workspace_id: WS, description: null, position: i, created_at: now }));
+  ].map((p, i) => ({ ...p, workspace_id: WS, description: null, position: i, default_priority: "medium", created_at: now }));
 
   const tasks: Task[] = [];
   const assignees: Data["assignees"] = [];

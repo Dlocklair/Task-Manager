@@ -30,14 +30,14 @@ export interface Store {
   tasksFor(personId: string): Task[];
   progress(projectId: string): { total: number; done: number; late: number; pct: number };
 
-  addProject(name: string, color: string): string;
-  updateProject(id: string, patch: Partial<Pick<Project, "name" | "color" | "description">>): void;
+  addProject(name: string, color: string, defaultPriority: Priority): string;
+  updateProject(id: string, patch: Partial<Pick<Project, "name" | "color" | "description" | "default_priority">>): void;
   deleteProject(id: string): void;
   addTask(input: NewTask): string;
   updateTask(id: string, patch: Partial<Pick<Task, "title" | "description" | "status" | "priority" | "due_date" | "project_id">>): void;
   deleteTask(id: string): void;
   toggleAssignee(taskId: string, personId: string): void;
-  addPerson(name: string, email: string | null): void;
+  addPerson(name: string, email: string | null, color?: string): void;
   updatePerson(id: string, patch: Partial<Pick<Person, "full_name" | "email" | "color">>): void;
   deletePerson(id: string): void;
 }
@@ -159,8 +159,8 @@ export function StoreProvider({ api, children }: { api: Api; children: ReactNode
         return { total: list.length, done, late, pct: list.length ? Math.round((100 * done) / list.length) : 0 };
       },
 
-      addProject: (name, color) => {
-        const row = { id: uid(), workspace_id: data.workspace.id, name, color, position: nextPos() };
+      addProject: (name, color, defaultPriority) => {
+        const row = { id: uid(), workspace_id: data.workspace.id, name, color, position: nextPos(), default_priority: defaultPriority };
         mut((d) => ({ ...d, projects: [...d.projects, { ...row, description: null, created_at: new Date().toISOString() }] }));
         save(api.insert("projects", row));
         return row.id;
@@ -181,7 +181,8 @@ export function StoreProvider({ api, children }: { api: Api; children: ReactNode
           parent_task_id: input.parent_task_id ?? null,
           title: input.title,
           status: input.status ?? ("todo" as Status),
-          priority: input.priority ?? ("none" as Priority),
+          // New tasks take the project's default priority unless one is given.
+          priority: input.priority ?? data.projects.find((p) => p.id === input.project_id)?.default_priority ?? ("medium" as Priority),
           due_date: input.due_date ?? null,
           position: nextPos(),
         };
@@ -237,8 +238,8 @@ export function StoreProvider({ api, children }: { api: Api; children: ReactNode
         save(api.assign(taskId, personId, on));
       },
 
-      addPerson: (name, email) => {
-        const row = { id: uid(), workspace_id: data.workspace.id, full_name: name, email, color: COLORS[data.people.length % COLORS.length] };
+      addPerson: (name, email, color) => {
+        const row = { id: uid(), workspace_id: data.workspace.id, full_name: name, email, color: color ?? COLORS[data.people.length % COLORS.length] };
         mut((d) => ({ ...d, people: [...d.people, { ...row, user_id: null }] }));
         save(api.insert("people", row));
       },

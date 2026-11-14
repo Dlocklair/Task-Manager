@@ -1,10 +1,10 @@
 import { useState, type FormEvent } from "react";
-import { Plus, Search, Trash2 } from "lucide-react";
+import { Check as CheckIcon, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import { useStore } from "../lib/store";
-import type { Task } from "../lib/types";
-import { addDays, byUrgency, firstName, greeting, isoDay, tint } from "../lib/util";
+import type { Person, Task } from "../lib/types";
+import { addDays, byUrgency, COLORS, firstName, greeting, isoDay, tint } from "../lib/util";
 import { TaskRow } from "./TaskList";
-import { Avatar, Empty, Modal } from "./ui";
+import { Avatar, Empty, Modal, Swatches } from "./ui";
 
 function buckets(tasks: Task[]) {
   const today = isoDay(), week = addDays(7);
@@ -146,9 +146,33 @@ export function MyTasks() {
 export function People() {
   const s = useStore();
   const [adding, setAdding] = useState(false);
+  const [editing, setEditing] = useState<Person | null>(null);
   const [pick, setPick] = useState<string | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
   const person = s.data.people.find((p) => p.id === pick);
   const theirs = person ? s.tasksFor(person.id).filter((t) => t.status !== "done").sort(byUrgency) : [];
+  // Only people other than you can be deleted here; your own entry stays.
+  const deletable = s.data.people.filter((p) => p.user_id !== s.data.userId);
+  const chosen = deletable.filter((p) => selected.has(p.id));
+
+  const toggleSelected = (id: string) =>
+    setSelected((cur) => {
+      const next = new Set(cur);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+
+  const deleteChosen = () => {
+    const tasks = new Set(chosen.flatMap((p) => s.tasksFor(p.id).map((t) => t.id))).size;
+    const names = chosen.map((p) => p.full_name).join(", ");
+    const msg = `Delete ${chosen.length === 1 ? chosen[0].full_name : `${chosen.length} people`} (${names})? ` +
+      `${tasks ? `They will be removed from ${tasks} task${tasks === 1 ? "" : "s"}. ` : ""}This can't be undone.`;
+    if (!window.confirm(msg)) return;
+    if (pick && selected.has(pick)) setPick(null);
+    chosen.forEach((p) => s.deletePerson(p.id));
+    setSelected(new Set());
+  };
 
   return (
     <div className="page">
@@ -160,15 +184,36 @@ export function People() {
         <button className="btn primary" onClick={() => setAdding(true)}><Plus size={16} />Add person</button>
       </header>
 
+      {chosen.length > 0 && (
+        <div className="bulk-bar" role="region" aria-label="Selected people">
+          <strong>{chosen.length} selected</strong>
+          <span className="grow" />
+          <button className="btn small" onClick={() => setSelected(new Set())}>Clear</button>
+          <button className="btn small danger-solid" onClick={deleteChosen}><Trash2 size={14} />Delete selected</button>
+        </div>
+      )}
+
       <div className="people-grid">
         {s.data.people.map((p) => {
           const open = s.tasksFor(p.id).filter((t) => t.status !== "done").length;
+          const isMe = p.user_id === s.data.userId;
           return (
-            <button key={p.id} className={"person-card" + (pick === p.id ? " on" : "")} style={tint(p.color)} aria-pressed={pick === p.id} onClick={() => setPick(pick === p.id ? null : p.id)}>
-              <Avatar person={p} size={44} />
-              <span className="person-name">{p.full_name}{p.user_id === s.data.userId && <em>You</em>}</span>
-              <span className="person-count">{open} open task{open === 1 ? "" : "s"}</span>
-            </button>
+            <div key={p.id} className="person-wrap">
+              {!isMe && (
+                <label className="person-select" title={`Select ${p.full_name}`}>
+                  <input type="checkbox" className="pick-box-input" checked={selected.has(p.id)} onChange={() => toggleSelected(p.id)} />
+                  <span className={"pick-box" + (selected.has(p.id) ? " on" : "")} aria-hidden="true">
+                    {selected.has(p.id) && <CheckIcon size={14} strokeWidth={3.2} />}
+                  </span>
+                  <span className="sr-only">Select {p.full_name}</span>
+                </label>
+              )}
+              <button className={"person-card" + (pick === p.id ? " on" : "")} style={tint(p.color)} aria-pressed={pick === p.id} onClick={() => setPick(pick === p.id ? null : p.id)}>
+                <Avatar person={p} size={44} />
+                <span className="person-name">{p.full_name}{isMe && <em>You</em>}</span>
+                <span className="person-count">{open} open task{open === 1 ? "" : "s"}</span>
+              </button>
+            </div>
           );
         })}
       </div>
@@ -177,47 +222,72 @@ export function People() {
         <section className="group">
           <div className="group-bar">
             <h2 className="group-head"><i />Open tasks for {firstName(person.full_name)}<span>{theirs.length}</span></h2>
-            {person.user_id !== s.data.userId && (
-              <button
-                className="btn quiet danger"
-                onClick={() => {
-                  if (window.confirm(`Remove ${person.full_name}? They will be unassigned from ${theirs.length} open task${theirs.length === 1 ? "" : "s"}.`)) {
-                    s.deletePerson(person.id);
-                    setPick(null);
-                  }
-                }}
-              >
-                <Trash2 size={15} />Remove person
-              </button>
-            )}
+            <div className="group-actions">
+              <button className="btn quiet" onClick={() => setEditing(person)}><Pencil size={15} />Edit</button>
+              {person.user_id !== s.data.userId && (
+                <button
+                  className="btn quiet danger"
+                  onClick={() => {
+                    if (window.confirm(`Delete ${person.full_name}? They will be removed from ${theirs.length} open task${theirs.length === 1 ? "" : "s"}.`)) {
+                      s.deletePerson(person.id);
+                      setPick(null);
+                    }
+                  }}
+                >
+                  <Trash2 size={15} />Delete
+                </button>
+              )}
+            </div>
           </div>
           {theirs.length ? <div className="rows">{theirs.map((t) => <TaskRow key={t.id} task={t} showProject />)}</div> : <Empty title={`${firstName(person.full_name)} has no open tasks`} />}
         </section>
       )}
 
       {adding && <PersonDialog onClose={() => setAdding(false)} />}
+      {editing && <PersonDialog person={editing} onClose={() => setEditing(null)} onDeleted={() => { setPick(null); setEditing(null); }} />}
     </div>
   );
 }
 
-function PersonDialog({ onClose }: { onClose(): void }) {
+function PersonDialog({ person, onClose, onDeleted }: { person?: Person; onClose(): void; onDeleted?(): void }) {
   const s = useStore();
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
+  const [name, setName] = useState(person?.full_name ?? "");
+  const [email, setEmail] = useState(person?.email ?? "");
+  const [color, setColor] = useState(person?.color ?? COLORS[s.data.people.length % COLORS.length]);
   const submit = (e: FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
-    s.addPerson(name.trim(), email.trim() || null);
+    if (person) s.updatePerson(person.id, { full_name: name.trim(), email: email.trim() || null, color });
+    else s.addPerson(name.trim(), email.trim() || null, color);
     onClose();
   };
+  const canDelete = person && person.user_id !== s.data.userId;
+  const taskCount = person ? s.tasksFor(person.id).length : 0;
   return (
-    <Modal title="Add person" onClose={onClose}>
+    <Modal title={person ? "Edit person" : "Add person"} onClose={onClose}>
       <form className="form" onSubmit={submit}>
         <label>Name<input autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="Full name" required /></label>
         <label>Email <small>optional</small><input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@example.com" /></label>
+        <div className="form-field">Color<Swatches value={color} onChange={setColor} colors={COLORS.includes(color) ? COLORS : [color, ...COLORS]} /></div>
         <div className="form-actions">
+          {canDelete && (
+            <button
+              type="button"
+              className="btn quiet danger"
+              onClick={() => {
+                if (window.confirm(`Delete ${person!.full_name}? They will be removed from ${taskCount} task${taskCount === 1 ? "" : "s"}.`)) {
+                  s.deletePerson(person!.id);
+                  onDeleted?.();
+                  onClose();
+                }
+              }}
+            >
+              <Trash2 size={15} />Delete person
+            </button>
+          )}
+          <span className="grow" />
           <button type="button" className="btn" onClick={onClose}>Cancel</button>
-          <button type="submit" className="btn primary" disabled={!name.trim()}>Add person</button>
+          <button type="submit" className="btn primary" disabled={!name.trim()}>{person ? "Save changes" : "Add person"}</button>
         </div>
       </form>
     </Modal>

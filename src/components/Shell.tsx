@@ -1,8 +1,8 @@
 import { useState, type FormEvent } from "react";
 import { CircleCheck, FolderKanban, House, LogOut, Plus, Users } from "lucide-react";
 import { useStore } from "../lib/store";
-import type { Project, View } from "../lib/types";
-import { COLORS, tint } from "../lib/util";
+import type { Priority, Project, View } from "../lib/types";
+import { COLORS, PRIORITIES, tint } from "../lib/util";
 import { Avatar, Modal, Swatches } from "./ui";
 
 const NAV: { view: View; label: string; icon: typeof House }[] = [
@@ -75,12 +75,13 @@ export function ProjectDialog({ project, onClose }: { project?: Project; onClose
   const s = useStore();
   const [name, setName] = useState(project?.name ?? "");
   const [color, setColor] = useState(project?.color ?? COLORS[s.data.projects.length % COLORS.length]);
+  const [defaultPriority, setDefaultPriority] = useState<Priority>(project?.default_priority ?? "medium");
   const submit = (e: FormEvent) => {
     e.preventDefault();
     const n = name.trim();
     if (!n) return;
-    if (project) s.updateProject(project.id, { name: n, color });
-    else s.go({ kind: "project", id: s.addProject(n, color) });
+    if (project) s.updateProject(project.id, { name: n, color, default_priority: defaultPriority });
+    else s.go({ kind: "project", id: s.addProject(n, color, defaultPriority) });
     onClose();
   };
   return (
@@ -88,6 +89,13 @@ export function ProjectDialog({ project, onClose }: { project?: Project; onClose
       <form className="form" onSubmit={submit}>
         <label>Name<input autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="Kitchen remodel" required /></label>
         <div className="form-field">Color<Swatches value={color} onChange={setColor} colors={COLORS.includes(color) ? COLORS : [color, ...COLORS]} /></div>
+        <div className="form-field">
+          <label htmlFor="proj-prio">Default priority</label>
+          <select id="proj-prio" value={defaultPriority} onChange={(e) => setDefaultPriority(e.target.value as Priority)}>
+            {PRIORITIES.map((pr) => <option key={pr.id} value={pr.id}>{pr.label}</option>)}
+          </select>
+          <p className="field-hint">New tasks in this project start with this priority. You can still change it on each task.</p>
+        </div>
         <div className="form-actions">
           {project && (
             <button
