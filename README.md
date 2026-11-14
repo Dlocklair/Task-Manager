@@ -1,49 +1,42 @@
 # Task Manager
 
-A color-coded task manager for organizing work by project. Tasks can have any number of subtasks and notes, and new tasks are added to whichever project is selected.
+A task manager for tracking projects, tasks, subtasks and the people they are assigned to. It works on a computer, tablet and phone, and stores everything in your own Supabase database.
 
-Built with React + TypeScript + Vite. Visual style follows the Gift Navigator design system (dark surfaces, teal for actions, lucide icons).
+Built with React, TypeScript and Vite. Data lives in Supabase (Postgres with row-level security); changes sync live between devices.
 
-## Features
+## What it does
 
-- **Projects** — create, rename, recolor and delete projects from the sidebar. Selecting a project filters the board to it.
-- **Default project** — while a project is selected, every task you add (Add Task button or the quick-add box in any column) goes into that project. With *All projects* open, quick-add uses the last project you added to.
-- **Tasks** — title, description, status, priority, due date and owner, all editable in the details panel.
-- **Status** — a drop-down with three steps: To do, In progress, Done (in the details panel and on each list row).
-- **Subtasks** — add as many as you need (type and press Enter repeatedly), check them off, rename in place, reorder with the arrows, delete. Progress shows on the card.
-- **Notes** — add time-stamped notes to any task (Ctrl/⌘ + Enter to add), edit or delete them.
-- **Board and List views** — drag cards between status columns, or change status from the drop-down.
-- **Filters that combine** — project, priority (pick several), due date (overdue, today, next 7 days, no date), status and search across titles, subtasks and notes. The summary tiles are shortcuts for the due-date and status filters.
-- **Saved views** — save any combination of filters and sort order (e.g. "High priority due today") and open it again from the sidebar in one click. Edit, rename, update or delete saved views; if you tweak an open view, the app offers *Update view* or *Revert*.
-- **Sorting** — by priority, due date, status or project, from the toolbar or by clicking list column headers (click again to reverse).
-- **Manual order** — drag the ⋮⋮ handle in the list (or a card on the board) to reorder tasks that share the same priority. Keyboard: focus the handle and press ↑ / ↓. Your order is kept under every sort except due date.
-- **Saved automatically** in the browser (localStorage). Export/Import a JSON backup from the sidebar (saved views included). Backups from the first version are upgraded automatically — any “In review” tasks become “In progress”.
-
-## Color key
-
-| Meaning | Shape | Colors |
-| --- | --- | --- |
-| Status | round dot | To do = violet · In progress = blue · Done = green |
-| Priority | signal bars (1–4) | Urgent = red · High = orange · Medium / Low = neutral |
-| Due date | badge | late = red · due today = amber · done = green |
-| Project | small square | the color you pick for the project |
-
-Every color is paired with a text label, so nothing relies on color alone.
+- **Home** – what is overdue, due today and due in the next 7 days, plus progress for every project. Search across all tasks.
+- **Projects** – each project has its own color. View tasks as a list grouped by status, or as a board you can drag cards across.
+- **Tasks** – status (To do, In progress, Done), priority, due date, details, notes, and any number of nested subtasks.
+- **People** – add anyone by name and assign them to tasks. They don't need an account.
+- **My tasks** – everything assigned to you, by due date.
+- **Phone and tablet** – bottom tab bar and full-screen task details on small screens; "Add to Home Screen" installs it like an app.
 
 ## Run it
 
 ```bash
 npm install
-npm run dev          # local dev server
-npm run build        # production build in dist/
-npm run build:single # one self-contained file in dist-single/index.html
+npm run dev      # http://localhost:5173
+npm run build    # production build in dist/
 ```
 
-## Code map
+Open `http://localhost:5173/?demo` to look around with sample data and no account. Nothing is saved in demo mode.
 
-- `src/types.ts` — data model (Project, Task, Subtask, Note)
-- `src/store.ts` — reducer with every action + localStorage persistence
-- `src/constants.ts` — status, priority and project colors, filter options
-- `src/filters.ts` — filter matching, sorting and reorder rules
-- `src/App.tsx` — layout, filters, dialogs
-- `src/components/` — Sidebar, Board, TaskCard, ListView, TaskDetail (subtasks + notes), dialogs
+## Supabase
+
+The connection details are in `.env`. The publishable key is designed to be public; row-level security in the database decides what each signed-in person can see.
+
+The database schema is in `supabase/migrations/`. To rebuild the database from scratch, run those files in order in the Supabase SQL editor (or `supabase db push`).
+
+Sign-in uses an emailed link or an email and password. In the Supabase dashboard under Authentication → URL Configuration, the Site URL and Redirect URLs must include every address the app is served from (for example `http://localhost:5173` and your deployed URL).
+
+## Layout of the code
+
+```
+src/
+  lib/         types, Supabase client, demo data, app state (store.tsx)
+  components/  screens and UI pieces
+  styles.css   design tokens and all styling
+supabase/migrations/   database schema
+```

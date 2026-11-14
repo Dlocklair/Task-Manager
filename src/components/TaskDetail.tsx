@@ -1,247 +1,204 @@
-import { useEffect, useRef, useState } from "react";
-import { ArrowDown, ArrowUp, CheckCircle2, ListChecks, NotebookPen, Pencil, Plus, RotateCcw, Trash2, X } from "lucide-react";
-import type { Project, Task } from "../types";
-import type { Action } from "../store";
-import { PRIORITIES } from "../constants";
-import { DueBadge, PriorityBars, ProjectPill, StatusSelect } from "./bits";
-import { formatTimestamp } from "../utils";
+import { useEffect, useState, type FormEvent } from "react";
+import { ArrowLeft, CornerLeftUp, Trash2, X } from "lucide-react";
+import { useStore } from "../lib/store";
+import type { Note, Priority, Task } from "../lib/types";
+import { PRIORITIES, STATUSES, step, tint, uid } from "../lib/util";
+import { QuickAdd } from "./TaskList";
+import { Avatar, Check, DueBadge } from "./ui";
 
-interface Props {
-  task: Task;
-  projects: Project[];
-  dispatch: React.Dispatch<Action>;
-  onClose: () => void;
-  onDelete: () => void;
-}
-
-function AutoTextarea(props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
-  const ref = useRef<HTMLTextAreaElement>(null);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    el.style.height = "auto";
-    el.style.height = el.scrollHeight + "px";
-  }, [props.value]);
-  return <textarea ref={ref} rows={1} {...props} />;
-}
-
-export function TaskDetail({ task, projects, dispatch, onClose, onDelete }: Props) {
-  const project = projects.find((p) => p.id === task.projectId);
-  const [subDraft, setSubDraft] = useState("");
-  const [noteDraft, setNoteDraft] = useState("");
-  const [editingNote, setEditingNote] = useState<{ id: string; text: string } | null>(null);
-  const [confirmDelete, setConfirmDelete] = useState(false);
-  const subInputRef = useRef<HTMLInputElement>(null);
+export function TaskDetail({ task }: { task: Task }) {
+  const s = useStore();
+  const project = s.project(task.project_id);
+  const parent = task.parent_task_id ? s.task(task.parent_task_id) : undefined;
+  const kids = s.kids(task.id);
+  const doneKids = kids.filter((k) => k.status === "done").length;
+  const assigned = new Set(s.assigned(task.id).map((p) => p.id));
+  const current = step(task.status);
 
   useEffect(() => {
-    setSubDraft("");
-    setNoteDraft("");
-    setEditingNote(null);
-    setConfirmDelete(false);
-  }, [task.id]);
-
-  const update = (patch: Partial<Task>) => dispatch({ type: "updateTask", id: task.id, patch });
-  const doneSubs = task.subtasks.filter((s) => s.done).length;
-  const pct = task.subtasks.length ? Math.round((doneSubs / task.subtasks.length) * 100) : 0;
-  const isDone = task.status === "done";
-
-  const addSubtask = () => {
-    const title = subDraft.trim();
-    if (!title) return;
-    dispatch({ type: "addSubtask", taskId: task.id, title });
-    setSubDraft("");
-    subInputRef.current?.focus();
-  };
-  const addNote = () => {
-    const text = noteDraft.trim();
-    if (!text) return;
-    dispatch({ type: "addNote", taskId: task.id, text });
-    setNoteDraft("");
-  };
-  const notesNewestFirst = [...task.notes].sort((a, b) => b.createdAt - a.createdAt);
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && s.openTask(null);
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [s]);
 
   return (
-    <aside className="detail" aria-label="Task details" data-testid="task-detail">
-      <div className="detail-section">
-        <div className="detail-head">
-          <ProjectPill project={project} />
-          <button type="button" className="tiny-btn" onClick={onClose} aria-label="Close details" title="Close">
-            <X size={16} aria-hidden="true" />
+    <aside className="detail" style={tint(project?.color ?? "#5B6B86")} aria-label="Task details">
+      <header className="detail-head">
+        <button className="icon-btn back" onClick={() => s.openTask(null)} aria-label="Back"><ArrowLeft size={20} /></button>
+        <span className="proj-chip"><i />{project?.name}</span>
+        <span className="grow" />
+        <button
+          className="icon-btn danger"
+          aria-label="Delete task"
+          onClick={() => {
+            const extra = kids.length ? ` and its ${kids.length} subtask${kids.length > 1 ? "s" : ""}` : "";
+            if (window.confirm(`Delete "${task.title}"${extra}? This can't be undone.`)) s.deleteTask(task.id);
+          }}
+        >
+          <Trash2 size={18} />
+        </button>
+        <button className="icon-btn close" onClick={() => s.openTask(null)} aria-label="Close"><X size={20} /></button>
+      </header>
+
+      <div className="detail-body" key={task.id}>
+        {parent && (
+          <button className="parent-link" onClick={() => s.openTask(parent.id)}>
+            <CornerLeftUp size={14} />Part of {parent.title}
           </button>
-        </div>
-        <label className="sr-only" htmlFor="td-title">Task name</label>
-        <AutoTextarea id="td-title" className="title-input" value={task.title} onChange={(e) => update({ title: e.target.value })} onBlur={(e) => !e.target.value.trim() && update({ title: "Untitled task" })} />
-        <label className="sr-only" htmlFor="td-desc">Description</label>
-        <textarea id="td-desc" className="textarea" value={task.description} onChange={(e) => update({ description: e.target.value })} placeholder="Add a description — what does done look like?" style={{ minHeight: 64, fontSize: 13 }} />
-      </div>
-
-      <div className="detail-section">
-        <div className="prop-grid">
-          <div className="field">
-            <label htmlFor="td-status">Status</label>
-            <StatusSelect id="td-status" status={task.status} onChange={(status) => dispatch({ type: "setStatus", id: task.id, status })} />
-          </div>
-          <div className="field">
-            <label htmlFor="td-project">Project</label>
-            <select id="td-project" className="select" value={task.projectId} onChange={(e) => update({ projectId: e.target.value })}>
-              {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-            </select>
-          </div>
-          <div className="field">
-            <label htmlFor="td-priority" style={{ display: "flex", alignItems: "center", gap: 6 }}>Priority <PriorityBars priority={task.priority} size={12} /></label>
-            <select id="td-priority" className="select" value={task.priority} onChange={(e) => update({ priority: e.target.value as Task["priority"] })}>
-              {PRIORITIES.map((p) => <option key={p.key} value={p.key}>{p.label}</option>)}
-            </select>
-          </div>
-          <div className="field">
-            <label htmlFor="td-due">Due date</label>
-            <input id="td-due" type="date" className="input" value={task.due} onChange={(e) => update({ due: e.target.value })} />
-          </div>
-          <div className="field">
-            <label htmlFor="td-owner">Owner</label>
-            <input id="td-owner" className="input" value={task.owner} onChange={(e) => update({ owner: e.target.value })} placeholder="Unassigned" />
-          </div>
-          <div className="field">
-            <span className="label">Timing</span>
-            <span style={{ height: 36, display: "flex", alignItems: "center" }}><DueBadge task={task} /></span>
-          </div>
-        </div>
-      </div>
-
-      {/* Subtasks */}
-      <div className="detail-section" aria-labelledby="td-subtasks">
-        <div className="section-title">
-          <h3 id="td-subtasks"><ListChecks size={16} aria-hidden="true" />Subtasks</h3>
-          <span className="meta">{task.subtasks.length ? `${doneSubs} of ${task.subtasks.length} done` : "None yet"}</span>
-        </div>
-        {task.subtasks.length > 0 && (
-          <div className="progress" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label="Subtasks complete">
-            <div style={{ width: pct + "%" }} />
-          </div>
         )}
-        <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 2 }}>
-          {task.subtasks.map((s, i) => (
-            <li key={s.id} className="subtask" data-testid="subtask">
-              <input
-                type="checkbox"
-                className="checkbox"
-                checked={s.done}
-                onChange={() => dispatch({ type: "updateSubtask", taskId: task.id, subtaskId: s.id, patch: { done: !s.done } })}
-                aria-label={`Mark “${s.title}” ${s.done ? "not done" : "done"}`}
-              />
-              <input
-                className={"sub-input" + (s.done ? " done" : "")}
-                value={s.title}
-                aria-label="Subtask name"
-                onChange={(e) => dispatch({ type: "updateSubtask", taskId: task.id, subtaskId: s.id, patch: { title: e.target.value } })}
-                onBlur={(e) => !e.target.value.trim() && dispatch({ type: "deleteSubtask", taskId: task.id, subtaskId: s.id })}
-              />
-              <span className="row-actions">
-                <button type="button" className="tiny-btn" disabled={i === 0} onClick={() => dispatch({ type: "moveSubtask", taskId: task.id, subtaskId: s.id, dir: -1 })} aria-label="Move up" title="Move up">
-                  <ArrowUp size={14} aria-hidden="true" />
-                </button>
-                <button type="button" className="tiny-btn" disabled={i === task.subtasks.length - 1} onClick={() => dispatch({ type: "moveSubtask", taskId: task.id, subtaskId: s.id, dir: 1 })} aria-label="Move down" title="Move down">
-                  <ArrowDown size={14} aria-hidden="true" />
-                </button>
-                <button type="button" className="tiny-btn danger" onClick={() => dispatch({ type: "deleteSubtask", taskId: task.id, subtaskId: s.id })} aria-label={`Delete subtask “${s.title}”`} title="Delete subtask">
-                  <Trash2 size={14} aria-hidden="true" />
-                </button>
-              </span>
-            </li>
-          ))}
-        </ul>
-        <form className="add-row" onSubmit={(e) => { e.preventDefault(); addSubtask(); }}>
-          <label className="sr-only" htmlFor="td-new-sub">New subtask</label>
-          <input id="td-new-sub" ref={subInputRef} className="input" value={subDraft} onChange={(e) => setSubDraft(e.target.value)} placeholder="Add a subtask and press Enter" />
-          <button type="submit" className="btn btn-outline btn-sm" disabled={!subDraft.trim()} style={{ height: 36 }}>
-            <Plus size={14} aria-hidden="true" />Add
-          </button>
-        </form>
-      </div>
+        <div className="detail-title">
+          <Check done={current === "done"} label={task.title} onToggle={() => s.updateTask(task.id, { status: current === "done" ? "todo" : "done" })} />
+          <textarea
+            className="title-input"
+            rows={1}
+            defaultValue={task.title}
+            aria-label="Task name"
+            onInput={(e) => {
+              const el = e.currentTarget;
+              el.style.height = "auto";
+              el.style.height = `${el.scrollHeight}px`;
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                e.currentTarget.blur();
+              }
+            }}
+            onBlur={(e) => {
+              const v = e.target.value.trim();
+              if (v && v !== task.title) s.updateTask(task.id, { title: v });
+              else e.target.value = task.title;
+            }}
+          />
+        </div>
 
-      {/* Notes */}
-      <div className="detail-section" aria-labelledby="td-notes">
-        <div className="section-title">
-          <h3 id="td-notes"><NotebookPen size={16} aria-hidden="true" />Notes</h3>
-          <span className="meta">{task.notes.length ? `${task.notes.length} ${task.notes.length === 1 ? "note" : "notes"}` : "None yet"}</span>
+        <div className="fields">
+          <label>Status</label>
+          <div className="seg status" role="radiogroup" aria-label="Status">
+            {STATUSES.map((st) => (
+              <button key={st.id} role="radio" aria-checked={current === st.id} className={(current === st.id ? "on " : "") + st.id} onClick={() => s.updateTask(task.id, { status: st.id })}>
+                {st.label}
+              </button>
+            ))}
+          </div>
+
+          <label htmlFor="f-due">Due</label>
+          <div className="field-row">
+            <input id="f-due" type="date" value={task.due_date ?? ""} onChange={(e) => s.updateTask(task.id, { due_date: e.target.value || null })} />
+            <DueBadge task={task} />
+          </div>
+
+          <label htmlFor="f-prio">Priority</label>
+          <select id="f-prio" value={task.priority} onChange={(e) => s.updateTask(task.id, { priority: e.target.value as Priority })}>
+            {PRIORITIES.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}
+          </select>
+
+          <label htmlFor="f-proj">Project</label>
+          <select id="f-proj" value={task.project_id} onChange={(e) => s.updateTask(task.id, { project_id: e.target.value })}>
+            {s.data.projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+          </select>
+
+          <label>Assigned to</label>
+          <div className="people-pick">
+            {s.data.people.map((p) => (
+              <button key={p.id} aria-pressed={assigned.has(p.id)} className={"person-chip" + (assigned.has(p.id) ? " on" : "")} onClick={() => s.toggleAssignee(task.id, p.id)}>
+                <Avatar person={p} size={22} />{p.full_name}
+              </button>
+            ))}
+          </div>
         </div>
-        <label className="sr-only" htmlFor="td-new-note">New note</label>
-        <textarea
-          id="td-new-note"
-          className="textarea"
-          value={noteDraft}
-          onChange={(e) => setNoteDraft(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); addNote(); } }}
-          placeholder="Write a note — progress, decisions, links…"
-          style={{ fontSize: 13 }}
-        />
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
-          <span className="meta">Ctrl + Enter to add</span>
-          <button type="button" className="btn btn-outline btn-sm" onClick={addNote} disabled={!noteDraft.trim()}>
-            <Plus size={14} aria-hidden="true" />Add note
-          </button>
-        </div>
-        {notesNewestFirst.map((n) => (
-          <div key={n.id} className="note" data-testid="note">
-            <div className="note-head">
-              <span className="meta">{formatTimestamp(n.createdAt)}</span>
-              <span style={{ display: "flex", gap: 2 }}>
-                <button type="button" className="tiny-btn" onClick={() => setEditingNote({ id: n.id, text: n.text })} aria-label="Edit note" title="Edit note">
-                  <Pencil size={13} aria-hidden="true" />
-                </button>
-                <button type="button" className="tiny-btn danger" onClick={() => dispatch({ type: "deleteNote", taskId: task.id, noteId: n.id })} aria-label="Delete note" title="Delete note">
-                  <Trash2 size={13} aria-hidden="true" />
-                </button>
-              </span>
-            </div>
-            {editingNote?.id === n.id ? (
-              <>
-                <textarea className="textarea" aria-label="Edit note" value={editingNote.text} onChange={(e) => setEditingNote({ id: n.id, text: e.target.value })} style={{ fontSize: 13 }} autoFocus />
-                <div style={{ display: "flex", justifyContent: "flex-end", gap: 6 }}>
-                  <button type="button" className="btn btn-ghost btn-sm" onClick={() => setEditingNote(null)}>Cancel</button>
-                  <button
-                    type="button"
-                    className="btn btn-primary btn-sm"
-                    disabled={!editingNote.text.trim()}
-                    onClick={() => { dispatch({ type: "updateNote", taskId: task.id, noteId: n.id, text: editingNote.text.trim() }); setEditingNote(null); }}
-                  >
-                    Save note
-                  </button>
-                </div>
-              </>
-            ) : (
-              <p className="note-text">{n.text}</p>
-            )}
+
+        <section className="detail-section">
+          <h3>Details</h3>
+          <textarea
+            className="desc"
+            rows={3}
+            defaultValue={task.description ?? ""}
+            placeholder="Add anything that helps get this done"
+            onBlur={(e) => {
+              const v = e.target.value.trim();
+              if (v !== (task.description ?? "")) s.updateTask(task.id, { description: v || null });
+            }}
+          />
+        </section>
+
+        <section className="detail-section">
+          <h3>Subtasks{kids.length > 0 && <span className="count">{doneKids} of {kids.length} done</span>}</h3>
+          {kids.length > 0 && <div className="bar thin"><span style={{ width: `${(100 * doneKids) / kids.length}%` }} /></div>}
+          <div className="subtasks">
+            {kids.map((k) => (
+              <div key={k.id} className={"subtask" + (k.status === "done" ? " is-done" : "")}>
+                <Check done={k.status === "done"} label={k.title} onToggle={() => s.updateTask(k.id, { status: k.status === "done" ? "todo" : "done" })} />
+                <button className="subtask-title" onClick={() => s.openTask(k.id)}>{k.title}</button>
+                <DueBadge task={k} />
+              </div>
+            ))}
+          </div>
+          <QuickAdd placeholder="Add a subtask" onAdd={(title) => s.addTask({ project_id: task.project_id, parent_task_id: task.id, title })} />
+        </section>
+
+        <Notes taskId={task.id} />
+      </div>
+    </aside>
+  );
+}
+
+function Notes({ taskId }: { taskId: string }) {
+  const s = useStore();
+  const [notes, setNotes] = useState<Note[] | null>(null);
+  const [body, setBody] = useState("");
+
+  useEffect(() => {
+    let live = true;
+    s.api.notes(taskId).then((n) => live && setNotes(n)).catch(() => live && setNotes([]));
+    return () => {
+      live = false;
+    };
+  }, [s.api, taskId]);
+
+  const add = (e: FormEvent) => {
+    e.preventDefault();
+    const text = body.trim();
+    if (!text) return;
+    const note: Note = { id: uid(), task_id: taskId, author_id: s.data.userId, body: text, created_at: new Date().toISOString() };
+    setNotes((n) => [...(n ?? []), note]);
+    setBody("");
+    s.api.insert("task_comments", { id: note.id, task_id: taskId, body: text }).catch(() => {
+      s.toast("That note was not saved. Check your connection and add it again.");
+      setNotes((n) => (n ?? []).filter((x) => x.id !== note.id));
+    });
+  };
+
+  const remove = (id: string) => {
+    setNotes((n) => (n ?? []).filter((x) => x.id !== id));
+    s.api.remove("task_comments", id).catch(() => s.toast("That note was not deleted."));
+  };
+
+  return (
+    <section className="detail-section">
+      <h3>Notes{notes && notes.length > 0 && <span className="count">{notes.length}</span>}</h3>
+      <div className="notes">
+        {(notes ?? []).map((n) => (
+          <div key={n.id} className="note">
+            <p>{n.body}</p>
+            <footer>
+              <time>{new Date(n.created_at).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</time>
+              {n.author_id === s.data.userId && <button onClick={() => remove(n.id)}>Delete</button>}
+            </footer>
           </div>
         ))}
       </div>
-
-      <div className="detail-section">
-        {confirmDelete ? (
-          <>
-            <div className="callout">Delete “{task.title}” with its {task.subtasks.length} subtasks and {task.notes.length} notes?</div>
-            <div className="detail-actions">
-              <button type="button" className="btn btn-danger-solid" onClick={onDelete}>Yes, delete task</button>
-              <button type="button" className="btn btn-ghost" onClick={() => setConfirmDelete(false)}>Cancel</button>
-            </div>
-          </>
-        ) : (
-          <div className="detail-actions">
-            <button
-              type="button"
-              className="btn btn-primary"
-              style={{ flex: 1 }}
-              onClick={() => dispatch({ type: "setStatus", id: task.id, status: isDone ? "todo" : "done" })}
-            >
-              {isDone ? <RotateCcw size={16} aria-hidden="true" /> : <CheckCircle2 size={16} aria-hidden="true" />}
-              {isDone ? "Reopen task" : "Mark complete"}
-            </button>
-            <button type="button" className="btn btn-danger" onClick={() => setConfirmDelete(true)}>
-              <Trash2 size={16} aria-hidden="true" />Delete
-            </button>
-          </div>
-        )}
-      </div>
-    </aside>
+      <form className="note-form" onSubmit={add}>
+        <textarea
+          rows={2}
+          value={body}
+          onChange={(e) => setBody(e.target.value)}
+          placeholder="Write a note"
+          aria-label="Write a note"
+          onKeyDown={(e) => (e.metaKey || e.ctrlKey) && e.key === "Enter" && add(e)}
+        />
+        <button className="btn" type="submit" disabled={!body.trim()}>Add note</button>
+      </form>
+    </section>
   );
 }
