@@ -147,8 +147,10 @@ export function NewTaskDialog({ onClose }: { onClose(): void }) {
   const submit = (e: FormEvent) => {
     e.preventDefault();
     if (!title.trim() || !projectId) return;
-    s.addTask({ project_id: projectId, title: title.trim(), due_date: due || null, assignMe: mine });
+    const id = s.addTask({ project_id: projectId, title: title.trim(), due_date: due || null, assignMe: mine });
     onClose();
+    // Open the new task so its due date, status and priority can be set right away.
+    s.openTask(id);
   };
   return (
     <Modal title="New task" onClose={onClose}>

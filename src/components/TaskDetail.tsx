@@ -2,11 +2,12 @@ import { useEffect, useState, type FormEvent } from "react";
 import { ArrowLeft, CornerLeftUp, Trash2, X } from "lucide-react";
 import { useStore } from "../lib/store";
 import type { Note, Priority, Task } from "../lib/types";
-import { PRIORITIES, STATUSES, step, tint, uid } from "../lib/util";
+import { PRIORITIES, STATUSES, step, tint } from "../lib/util";
 import { AssigneePicker } from "./AssigneePicker";
 import { RichEditor, RichField, RichView } from "./RichText";
 import { QuickAdd } from "./TaskList";
 import { Check, DueBadge } from "./ui";
+import { ReminderField } from "./ReminderField";
 
 export function TaskDetail({ task }: { task: Task }) {
   const s = useStore();
@@ -86,8 +87,20 @@ export function TaskDetail({ task }: { task: Task }) {
           <label htmlFor="f-due">Due</label>
           <div className="field-row">
             <input id="f-due" type="date" value={task.due_date ?? ""} onChange={(e) => s.updateTask(task.id, { due_date: e.target.value || null })} />
+            {task.due_date && (
+              <input
+                type="time"
+                aria-label="Due time"
+                title="Due time. Leave blank for 9:00 AM."
+                value={task.due_time?.slice(0, 5) ?? ""}
+                onChange={(e) => s.updateTask(task.id, { due_time: e.target.value || null })}
+              />
+            )}
             <DueBadge task={task} />
           </div>
+
+          <label>Remind me</label>
+          <ReminderField task={task} />
 
           <label htmlFor="f-prio">Priority</label>
           <select id="f-prio" value={task.priority} onChange={(e) => s.updateTask(task.id, { priority: e.target.value as Priority })}>
@@ -137,7 +150,9 @@ export function TaskDetail({ task }: { task: Task }) {
 function Notes({ taskId }: { taskId: string }) {
   const s = useStore();
   const [notes, setNotes] = useState<Note[] | null>(null);
-  const [body, setBody] = useState("");
+  // The draft lives in the store, so switching tasks or closing the panel can ask before losing it.
+  const body = s.drafts[taskId] ?? "";
+  const setBody = (text: string) => s.setDraft(taskId, text);
 
   useEffect(() => {
     let live = true;
@@ -149,15 +164,8 @@ function Notes({ taskId }: { taskId: string }) {
 
   const add = (e: FormEvent) => {
     e.preventDefault();
-    const text = body.trim();
-    if (!text) return;
-    const note: Note = { id: uid(), task_id: taskId, author_id: s.data.userId, body: text, created_at: new Date().toISOString() };
-    setNotes((n) => [...(n ?? []), note]);
-    setBody("");
-    s.api.insert("task_comments", { id: note.id, task_id: taskId, body: text }).catch(() => {
-      s.toast("That note was not saved. Check your connection and add it again.");
-      setNotes((n) => (n ?? []).filter((x) => x.id !== note.id));
-    });
+    const note = s.saveDraft(taskId);
+    if (note) setNotes((n) => [...(n ?? []), note]);
   };
 
   const remove = (id: string) => {
@@ -168,6 +176,7 @@ function Notes({ taskId }: { taskId: string }) {
   return (
     <section className="detail-section">
       <h3>Notes{notes && notes.length > 0 && <span className="count">{notes.length}</span>}</h3>
+      {body.trim() && <p className="draft-warning" role="status">This note is not added yet. Press Add note to save it.</p>}
       <div className="notes">
         {(notes ?? []).map((n) => (
           <div key={n.id} className="note">
@@ -193,7 +202,7 @@ function Notes({ taskId }: { taskId: string }) {
             }
           }}
         />
-        <button className="btn" type="submit" disabled={!body.trim()}>Add note</button>
+        <button className="btn primary" type="submit" disabled={!body.trim()}>Add note</button>
       </form>
     </section>
   );

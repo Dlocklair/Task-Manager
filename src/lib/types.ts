@@ -24,6 +24,10 @@ export interface Task {
   status: Status;
   priority: Priority;
   due_date: string | null;
+  /** Time of day it is due (HH:MM). Null means 9:00 AM. */
+  due_time: string | null;
+  /** Remind this many minutes before the due moment. Null means no reminder. */
+  remind_before_minutes: number | null;
   position: number;
   completed_at: string | null;
   created_at: string;

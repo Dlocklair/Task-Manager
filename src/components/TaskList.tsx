@@ -12,11 +12,12 @@ export function TaskRow({ task, depth = 0, showProject = false }: { task: Task; 
   const project = s.project(task.project_id);
   const done = task.status === "done";
   const doneKids = kids.filter((k) => k.status === "done").length;
+  const picked = s.selection.has(task.id);
 
   return (
     <>
       <div
-        className={"row" + (done ? " is-done" : "") + (s.selectedId === task.id ? " is-selected" : "")}
+        className={"row" + (done ? " is-done" : "") + (s.selectedId === task.id ? " is-selected" : "") + (picked ? " is-picked" : "")}
         style={{ ...tint(project?.color ?? "#5B6B86"), paddingLeft: 10 + depth * 28 }}
         onClick={() => s.openTask(task.id)}
         onKeyDown={(e) => e.key === "Enter" && e.target === e.currentTarget && s.openTask(task.id)}
@@ -37,6 +38,14 @@ export function TaskRow({ task, depth = 0, showProject = false }: { task: Task; 
         ) : (
           <span className="caret-space" />
         )}
+        <input
+          type="checkbox"
+          className="pick-tick"
+          checked={picked}
+          aria-label={`Select ${task.title}`}
+          onClick={(e) => e.stopPropagation()}
+          onChange={() => s.toggleSelect(task.id)}
+        />
         <Check done={done} label={task.title} onToggle={() => s.updateTask(task.id, { status: done ? "todo" : "done" })} />
         <span className="row-title">{task.title}</span>
         <span className="row-meta">

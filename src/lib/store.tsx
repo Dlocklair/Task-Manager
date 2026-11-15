@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import type { Api, Data, Person, Priority, Project, Status, Task, View } from "./types";
+import type { Api, Data, Note, Person, Priority, Project, Status, Task, View } from "./types";
 import { COLORS, isoDay, uid } from "./util";
 
 interface NewTask {
@@ -12,6 +12,8 @@ interface NewTask {
   assignMe?: boolean;
 }
 
+type TaskPatch = Partial<Pick<Task, "title" | "description" | "status" | "priority" | "due_date" | "due_time" | "remind_before_minutes" | "project_id">>;
+
 export interface Store {
   api: Api;
   data: Data;
@@ -21,6 +23,24 @@ export interface Store {
   selectedId: string | null;
   openTask(id: string | null): void;
   toast(message: string): void;
+
+  /** Unsaved note text, per task. Kept until the note is added or discarded. */
+  drafts: Record<string, string>;
+  setDraft(taskId: string, text: string): void;
+  saveDraft(taskId: string): Note | null;
+  discardDraft(taskId: string): void;
+  /** Set when you try to leave a task or view with an unsaved note. The app asks what to do. */
+  pendingLeave: { to: { kind: "task"; id: string | null } | { kind: "view"; view: View } } | null;
+  resolveLeave(choice: "save" | "discard" | "stay"): void;
+
+  /** Multi-select for bulk edits. */
+  selection: Set<string>;
+  toggleSelect(id: string): void;
+  selectMany(ids: string[], on: boolean): void;
+  clearSelection(): void;
+  bulkUpdate(ids: string[], patch: Partial<Pick<Task, "status" | "priority" | "due_date" | "due_time" | "remind_before_minutes" | "project_id">>): void;
+  bulkAssign(ids: string[], personId: string, on: boolean): void;
+  bulkDelete(ids: string[]): void;
 
   project(id: string): Project | undefined;
   task(id: string): Task | undefined;
@@ -37,7 +57,7 @@ export interface Store {
   defaultAssigneesFor(projectId: string): Person[];
   deleteProject(id: string): void;
   addTask(input: NewTask): string;
-  updateTask(id: string, patch: Partial<Pick<Task, "title" | "description" | "status" | "priority" | "due_date" | "project_id">>): void;
+  updateTask(id: string, patch: Partial<Pick<Task, "title" | "description" | "status" | "priority" | "due_date" | "due_time" | "remind_before_minutes" | "project_id">>): void;
   deleteTask(id: string): void;
   toggleAssignee(taskId: string, personId: string): void;
   addPerson(name: string, email: string | null, color?: string): void;
@@ -74,6 +94,9 @@ export function StoreProvider({ api, children }: { api: Api; children: ReactNode
   const [view, setView] = useState<View>({ kind: "home" });
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
+  const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const [selection, setSelection] = useState<Set<string>>(new Set());
+  const [pendingLeave, setPendingLeave] = useState<Store["pendingLeave"]>(null);
   const toastTimer = useRef<number>();
 
   const toast = useCallback((message: string) => {
@@ -130,10 +153,42 @@ export function StoreProvider({ api, children }: { api: Api; children: ReactNode
     const tasks = new Map(data.tasks.map((t) => [t.id, t]));
     const me = data.people.find((p) => p.user_id === data.userId);
     const nextPos = () => Date.now();
+    const hasDraft = (id: string | null) => !!id && (drafts[id] ?? "").trim().length > 0;
+    const dropDraft = (id: string) =>
+      setDrafts((d) => {
+        const next = { ...d };
+        delete next[id];
+        return next;
+      });
     const validPeople = new Set(data.people.map((p) => p.id));
     const defaultIdsFor = (projectId: string): string[] => {
       const project = data.projects.find((p) => p.id === projectId);
       return (project?.default_assignee_ids ?? data.workspace.default_assignee_ids).filter((id) => validPeople.has(id));
+    };
+
+    const updateTask = (id: string, rawPatch: TaskPatch) => {
+      // A task without a due date cannot have a time or a reminder.
+      const patch: TaskPatch = rawPatch.due_date === null ? { ...rawPatch, due_time: null, remind_before_minutes: null } : rawPatch;
+      mut((d) => {
+        const moving = patch.project_id ? descendants(d.tasks, id) : null;
+        return {
+          ...d,
+          tasks: d.tasks.map((t) => {
+            if (t.id === id) {
+              const next = { ...t, ...patch };
+              if (patch.status) next.completed_at = patch.status === "done" ? (t.completed_at ?? new Date().toISOString()) : null;
+              // A subtask moved to another project becomes a task of its own there.
+              if (patch.project_id && patch.project_id !== t.project_id) next.parent_task_id = null;
+              return next;
+            }
+            return moving?.has(t.id) ? { ...t, project_id: patch.project_id! } : t;
+          }),
+        };
+      });
+      const current = tasks.get(id);
+      const remote: Record<string, unknown> = { ...patch };
+      if (patch.project_id && current && patch.project_id !== current.project_id && current.parent_task_id) remote.parent_task_id = null;
+      save(api.update("tasks", id, remote));
     };
 
     return {
@@ -142,12 +197,93 @@ export function StoreProvider({ api, children }: { api: Api; children: ReactNode
       me,
       view,
       go: (v) => {
-        setView(v);
-        setSelectedId(null);
+        if (hasDraft(selectedId)) setPendingLeave({ to: { kind: "view", view: v } });
+        else {
+          setView(v);
+          setSelectedId(null);
+          setSelection(new Set());
+        }
       },
       selectedId,
-      openTask: setSelectedId,
+      openTask: (id) => {
+        if (id === selectedId) return;
+        if (hasDraft(selectedId)) setPendingLeave({ to: { kind: "task", id } });
+        else setSelectedId(id);
+      },
       toast,
+
+      drafts,
+      setDraft: (taskId, text) =>
+        setDrafts((d) => {
+          const next = { ...d };
+          if (text.trim()) next[taskId] = text;
+          else delete next[taskId];
+          return next;
+        }),
+      saveDraft: (taskId) => {
+        const body = (drafts[taskId] ?? "").trim();
+        if (!body) return null;
+        const note: Note = { id: uid(), task_id: taskId, author_id: data.userId, body, created_at: new Date().toISOString() };
+        dropDraft(taskId);
+        save(api.insert("task_comments", { id: note.id, task_id: taskId, body }));
+        return note;
+      },
+      discardDraft: (taskId) => dropDraft(taskId),
+      pendingLeave,
+      resolveLeave: (choice) => {
+        const leave = pendingLeave;
+        setPendingLeave(null);
+        if (!leave || choice === "stay") return;
+        if (selectedId && choice === "save" && (drafts[selectedId] ?? "").trim()) {
+          const body = drafts[selectedId].trim();
+          save(api.insert("task_comments", { id: uid(), task_id: selectedId, body }));
+          dropDraft(selectedId);
+        }
+        if (selectedId && choice === "discard") dropDraft(selectedId);
+        if (leave.to.kind === "task") setSelectedId(leave.to.id);
+        else {
+          setView(leave.to.view);
+          setSelectedId(null);
+          setSelection(new Set());
+        }
+      },
+
+      selection,
+      toggleSelect: (id) =>
+        setSelection((cur) => {
+          const next = new Set(cur);
+          if (next.has(id)) next.delete(id);
+          else next.add(id);
+          return next;
+        }),
+      selectMany: (ids, on) =>
+        setSelection((cur) => {
+          const next = new Set(cur);
+          ids.forEach((id) => (on ? next.add(id) : next.delete(id)));
+          return next;
+        }),
+      clearSelection: () => setSelection(new Set()),
+      bulkUpdate: (ids, patch) => {
+        ids.forEach((id) => updateTask(id, patch));
+      },
+      bulkAssign: (ids, personId, on) => {
+        mut((d) => ({
+          ...d,
+          assignees: on
+            ? [...d.assignees, ...ids.filter((id) => !d.assignees.some((a) => a.task_id === id && a.person_id === personId)).map((id) => ({ task_id: id, person_id: personId }))]
+            : d.assignees.filter((a) => !(ids.includes(a.task_id) && a.person_id === personId)),
+        }));
+        ids.forEach((id) => save(api.assign(id, personId, on)));
+      },
+      bulkDelete: (ids) => {
+        mut((d) => {
+          const gone = new Set<string>();
+          ids.forEach((id) => descendants(d.tasks, id).forEach((x) => gone.add(x)));
+          return { ...d, tasks: d.tasks.filter((t) => !gone.has(t.id)), assignees: d.assignees.filter((a) => !gone.has(a.task_id)) };
+        });
+        setSelection(new Set());
+        ids.forEach((id) => save(api.remove("tasks", id)));
+      },
 
       project: (id) => data.projects.find((p) => p.id === id),
       task: (id) => tasks.get(id),
@@ -197,6 +333,8 @@ export function StoreProvider({ api, children }: { api: Api; children: ReactNode
           // New tasks take the project's default priority unless one is given.
           priority: input.priority ?? data.projects.find((p) => p.id === input.project_id)?.default_priority ?? ("medium" as Priority),
           due_date: input.due_date ?? null,
+          due_time: null,
+          remind_before_minutes: null,
           position: nextPos(),
         };
         const now = new Date().toISOString();
@@ -213,28 +351,7 @@ export function StoreProvider({ api, children }: { api: Api; children: ReactNode
         );
         return row.id;
       },
-      updateTask: (id, patch) => {
-        mut((d) => {
-          const moving = patch.project_id ? descendants(d.tasks, id) : null;
-          return {
-            ...d,
-            tasks: d.tasks.map((t) => {
-              if (t.id === id) {
-                const next = { ...t, ...patch };
-                if (patch.status) next.completed_at = patch.status === "done" ? (t.completed_at ?? new Date().toISOString()) : null;
-                // A subtask moved to another project becomes a task of its own there.
-                if (patch.project_id && patch.project_id !== t.project_id) next.parent_task_id = null;
-                return next;
-              }
-              return moving?.has(t.id) ? { ...t, project_id: patch.project_id! } : t;
-            }),
-          };
-        });
-        const current = tasks.get(id);
-        const remote: Record<string, unknown> = { ...patch };
-        if (patch.project_id && current && patch.project_id !== current.project_id && current.parent_task_id) remote.parent_task_id = null;
-        save(api.update("tasks", id, remote));
-      },
+      updateTask,
       deleteTask: (id) => {
         mut((d) => {
           const gone = descendants(d.tasks, id);
@@ -268,7 +385,7 @@ export function StoreProvider({ api, children }: { api: Api; children: ReactNode
         save(api.remove("people", id));
       },
     };
-  }, [api, data, view, selectedId, toast, reload]);
+  }, [api, data, view, selectedId, toast, reload, drafts, selection, pendingLeave]);
 
   if (error && !store) {
     return (

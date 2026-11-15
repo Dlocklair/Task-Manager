@@ -1,7 +1,7 @@
 import { useEffect, type ReactNode } from "react";
-import { Calendar, Check as CheckIcon, Flag, X } from "lucide-react";
+import { Bell, Calendar, Check as CheckIcon, Flag, X } from "lucide-react";
 import type { Person, Priority, Task } from "../lib/types";
-import { dueLabel, dueTone, initials, PRIORITIES, tint } from "../lib/util";
+import { dueLabel, dueTone, formatTime, initials, PRIORITIES, tint } from "../lib/util";
 
 export function Avatar({ person, size = 26 }: { person: Person; size?: number }) {
   return (
@@ -46,6 +46,8 @@ export function DueBadge({ task }: { task: Task }) {
     <span className={`due ${tone}`}>
       <Calendar size={12} />
       {dueLabel(task.due_date)}
+      {task.due_time && ` ${formatTime(task.due_time)}`}
+      {task.remind_before_minutes !== null && <Bell size={11} aria-label="Reminder set" />}
       {tone === "late" && <span className="sr-only"> (overdue)</span>}
     </span>
   );

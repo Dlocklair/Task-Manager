@@ -35,7 +35,7 @@ export function ProjectView({ project, onEdit }: { project: Project; onEdit(): v
       </header>
 
       <div className="toolbar">
-        <QuickAdd placeholder={`Add a task to ${project.name}`} onAdd={(title) => s.addTask({ project_id: project.id, title })} />
+        <QuickAdd placeholder={`Add a task to ${project.name}`} onAdd={(title) => s.openTask(s.addTask({ project_id: project.id, title }))} />
         <div className="seg" role="tablist" aria-label="Layout">
           <button role="tab" aria-selected={mode === "list"} className={mode === "list" ? "on" : ""} onClick={() => setMode("list")}><LayoutList size={16} />List</button>
           <button role="tab" aria-selected={mode === "board"} className={mode === "board" ? "on" : ""} onClick={() => setMode("board")}><Columns3 size={16} />Board</button>
@@ -95,7 +95,7 @@ function Board({ groups, projectId }: { groups: Record<Step, Task[]>; projectId:
           <h2 className={`group-head ${g}`}><i />{STATUSES.find((x) => x.id === g)!.label}<span>{groups[g].length}</span></h2>
           <div className="cards">
             {groups[g].map((t) => <Card key={t.id} task={t} />)}
-            {g !== "done" && <QuickAdd placeholder="Add a task" onAdd={(title) => s.addTask({ project_id: projectId, title, status: g })} />}
+            {g !== "done" && <QuickAdd placeholder="Add a task" onAdd={(title) => s.openTask(s.addTask({ project_id: projectId, title, status: g }))} />}
           </div>
         </section>
       ))}
@@ -108,9 +108,10 @@ function Card({ task }: { task: Task }) {
   const kids = s.kids(task.id);
   const doneKids = kids.filter((k) => k.status === "done").length;
   const done = task.status === "done";
+  const picked = s.selection.has(task.id);
   return (
     <article
-      className={"card" + (done ? " is-done" : "") + (s.selectedId === task.id ? " is-selected" : "")}
+      className={"card" + (done ? " is-done" : "") + (s.selectedId === task.id ? " is-selected" : "") + (picked ? " is-picked" : "")}
       draggable
       onDragStart={(e) => e.dataTransfer.setData("text/task", task.id)}
       onClick={() => s.openTask(task.id)}
@@ -118,6 +119,14 @@ function Card({ task }: { task: Task }) {
       tabIndex={0}
     >
       <div className="card-top">
+        <input
+          type="checkbox"
+          className="pick-tick"
+          checked={picked}
+          aria-label={`Select ${task.title}`}
+          onClick={(e) => e.stopPropagation()}
+          onChange={() => s.toggleSelect(task.id)}
+        />
         <Check done={done} label={task.title} onToggle={() => s.updateTask(task.id, { status: done ? "todo" : "done" })} />
         <span className="row-title">{task.title}</span>
       </div>

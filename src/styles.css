@@ -432,3 +432,39 @@ input[type="checkbox"] { width: 17px; height: 17px; accent-color: var(--primary)
 .detail .fields > label, .detail .person-chip, .detail .picker-foot, .detail .parent-link, .detail .picker-summary { font-size: 13px; }
 .detail .note .rt-view { font-size: 13.5px; }
 .note-form .rt-input { min-height: 126px; max-height: 60vh; overflow-y: auto; }
+
+/* Note drafts and leave prompt */
+.draft-warning { font-size: 13px; color: var(--today); background: var(--today-soft); border-radius: var(--r-sm); padding: 7px 10px; }
+.leave-body p { line-height: 1.5; }
+
+/* Multi-select */
+.pick-tick { width: 18px; height: 18px; flex: none; accent-color: var(--primary); cursor: pointer; margin: 0; }
+.row.is-picked, .card.is-picked { box-shadow: inset 3px 0 0 var(--primary); background: var(--primary-soft); }
+.bulk-dock { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); z-index: 40; width: min(980px, calc(100vw - 32px)); max-height: 60vh; overflow-y: auto; display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px 14px; background: var(--navy); color: #fff; border-radius: var(--r); padding: 14px 16px; box-shadow: 0 18px 40px rgb(22 28 46 / 0.35); }
+.bulk-count { display: flex; align-items: center; gap: 6px; width: 100%; }
+.bulk-count strong { font-size: 15px; flex: 1; }
+.icon-btn.on-dark { color: #fff; }
+.bulk-field { display: flex; flex-direction: column; gap: 5px; font-size: 12px; color: #b9c2da; font-weight: 600; }
+.bulk-field.wide { flex: 1 1 320px; }
+.bulk-field select, .bulk-field input { font-size: 14px; color: var(--ink); background: #fff; border: 0; border-radius: var(--r-sm); padding: 7px 9px; min-width: 120px; }
+.bulk-field input[type="number"] { width: 64px; min-width: 0; }
+.bulk-inline { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.bulk-inline select { min-width: 170px; }
+.bulk-inline small, .bulk-field > small, .bulk-note { font-size: 12px; color: #b9c2da; font-weight: 500; }
+.bulk-dock .btn.small { background: rgb(255 255 255 / 0.14); color: #fff; border-color: transparent; align-self: flex-end; }
+.bulk-dock .btn.small:disabled { opacity: 0.45; }
+@media (max-width: 760px) { .bulk-dock { bottom: 74px; } }
+
+/* Reminders */
+.reminder { display: flex; flex-direction: column; gap: 8px; }
+.remind-inputs { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 13px; color: var(--ink-2); }
+.remind-inputs input { width: 64px; padding: 6px 8px; }
+.reminder-stack { position: fixed; left: 16px; bottom: 16px; z-index: 45; display: flex; flex-direction: column; gap: 10px; width: min(340px, calc(100vw - 32px)); }
+.reminder-card { background: var(--surface); border-left: 4px solid var(--today); border-radius: var(--r); box-shadow: 0 14px 34px rgb(22 28 46 / 0.22); padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; }
+.reminder-card strong { font-size: 15px; }
+.reminder-card p { font-size: 13px; color: var(--ink-2); }
+.reminder-card footer { display: flex; gap: 8px; justify-content: flex-end; }
+.reminder-card .btn.small { padding: 5px 10px; }
+@media (max-width: 760px) { .reminder-stack { bottom: 80px; } }
+/* Due date, time and badge wrap inside the panel */
+.detail .field-row { flex-wrap: wrap; }

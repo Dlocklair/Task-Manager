@@ -29,7 +29,7 @@ function build(): Data {
     const id = `t-${++n}`;
     tasks.push({
       id, workspace_id: WS, project_id: project, parent_task_id: parent, title, description, status, priority,
-      due_date: due === null ? null : addDays(due), position: n, completed_at: status === "done" ? now : null, created_at: now,
+      due_date: due === null ? null : addDays(due), due_time: null, remind_before_minutes: null, position: n, completed_at: status === "done" ? now : null, created_at: now,
     });
     who.forEach((p) => assignees.push({ task_id: id, person_id: p }));
     return id;

@@ -8,6 +8,9 @@ import type { Project } from "./lib/types";
 import { Auth } from "./components/Auth";
 import { ProjectView } from "./components/ProjectView";
 import { MobileNav, NewTaskDialog, ProjectDialog, Sidebar } from "./components/Shell";
+import { LeaveDialog } from "./components/LeaveDialog";
+import { BulkBar } from "./components/BulkBar";
+import { Reminders } from "./components/Reminders";
 import { TaskDetail } from "./components/TaskDetail";
 import { Home, MyTasks, People, Projects } from "./components/views";
 
@@ -61,6 +64,9 @@ function Workspace({ onSignOut }: { onSignOut?: () => void }) {
       <MobileNav onNewTask={() => setNewTask(true)} />
       {projectDialog && <ProjectDialog project={projectDialog.project} onClose={() => setProjectDialog(null)} />}
       {newTask && <NewTaskDialog onClose={() => setNewTask(false)} />}
+      <BulkBar />
+      <Reminders />
+      <LeaveDialog />
     </div>
   );
 }

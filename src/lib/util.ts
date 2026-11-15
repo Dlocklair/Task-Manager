@@ -88,3 +88,23 @@ export function greeting(): string {
   const h = new Date().getHours();
   return h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
 }
+
+/** The moment a task is due. With no time set, that is 9:00 AM. */
+export function dueMoment(day: string, time: string | null): Date {
+  const [y, m, d] = day.split("-").map(Number);
+  const [h, min] = (time ?? "09:00").split(":").map(Number);
+  return new Date(y, m - 1, d, h, min);
+}
+
+export function formatTime(hhmm: string): string {
+  const [h, m] = hhmm.split(":").map(Number);
+  const d = new Date();
+  d.setHours(h, m, 0, 0);
+  return d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+}
+
+/** When a reminder should fire, or null if the task has no reminder. */
+export function reminderMoment(task: { due_date: string | null; due_time: string | null; remind_before_minutes: number | null }): Date | null {
+  if (!task.due_date || task.remind_before_minutes === null) return null;
+  return new Date(dueMoment(task.due_date, task.due_time).getTime() - task.remind_before_minutes * 60000);
+}
