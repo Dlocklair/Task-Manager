@@ -17,7 +17,7 @@ function build(): Data {
     { id: "pr-lake", name: "Lake house turnover", color: COLORS[1] },
     { id: "pr-app", name: "Gift app launch", color: COLORS[6] },
     { id: "pr-taxes", name: "Taxes and paperwork", color: COLORS[3] },
-  ].map((p, i) => ({ ...p, workspace_id: WS, description: null, position: i, default_priority: "medium", created_at: now }));
+  ].map((p, i) => ({ ...p, workspace_id: WS, description: null, position: i, default_priority: "medium", default_assignee_ids: null, created_at: now }));
 
   const tasks: Task[] = [];
   const assignees: Data["assignees"] = [];
@@ -61,7 +61,7 @@ function build(): Data {
   add("pr-taxes", "Gather the 1099s", "todo", 20, "none", ["p-me"]);
   add("pr-taxes", "Send receipts to the accountant", "todo", null, "low", ["p-me"]);
 
-  return { userId: "demo-user", email: "demo@example.com", workspace: { id: WS, name: "Demo workspace" }, projects, tasks, people, assignees };
+  return { userId: "demo-user", email: "demo@example.com", workspace: { id: WS, name: "Demo workspace", default_assignee_ids: [] }, projects, tasks, people, assignees };
 }
 
 const demoNotes: Record<string, Note[]> = {

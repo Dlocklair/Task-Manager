@@ -4,6 +4,7 @@ import { useStore } from "../lib/store";
 import type { Priority, Project, View } from "../lib/types";
 import { COLORS, PRIORITIES, tint } from "../lib/util";
 import { Avatar, Modal, Swatches } from "./ui";
+import { PeoplePicks } from "./PeoplePicks";
 
 const NAV: { view: View; label: string; icon: typeof House }[] = [
   { view: { kind: "home" }, label: "Home", icon: House },
@@ -76,11 +77,17 @@ export function ProjectDialog({ project, onClose }: { project?: Project; onClose
   const [name, setName] = useState(project?.name ?? "");
   const [color, setColor] = useState(project?.color ?? COLORS[s.data.projects.length % COLORS.length]);
   const [defaultPriority, setDefaultPriority] = useState<Priority>(project?.default_priority ?? "medium");
+  // null on the project means it uses the workspace default assignees.
+  const [ownDefaults, setOwnDefaults] = useState(project?.default_assignee_ids !== null && project?.default_assignee_ids !== undefined);
+  const [assignees, setAssignees] = useState<string[]>(
+    project?.default_assignee_ids ?? s.data.workspace.default_assignee_ids,
+  );
   const submit = (e: FormEvent) => {
     e.preventDefault();
     const n = name.trim();
     if (!n) return;
-    if (project) s.updateProject(project.id, { name: n, color, default_priority: defaultPriority });
+    const default_assignee_ids = ownDefaults ? assignees : null;
+    if (project) s.updateProject(project.id, { name: n, color, default_priority: defaultPriority, default_assignee_ids });
     else s.go({ kind: "project", id: s.addProject(n, color, defaultPriority) });
     onClose();
   };
@@ -95,6 +102,15 @@ export function ProjectDialog({ project, onClose }: { project?: Project; onClose
             {PRIORITIES.map((pr) => <option key={pr.id} value={pr.id}>{pr.label}</option>)}
           </select>
           <p className="field-hint">New tasks in this project start with this priority. You can still change it on each task.</p>
+        </div>
+        <div className="form-field">
+          <span>Assigned to by default</span>
+          <label className="check-line">
+            <input type="checkbox" checked={!ownDefaults} onChange={(e) => setOwnDefaults(!e.target.checked)} />
+            Use the workspace default
+          </label>
+          {ownDefaults && <PeoplePicks label="Default assignees for this project" value={assignees} onChange={setAssignees} />}
+          <p className="field-hint">{ownDefaults ? "Only these people are assigned to new tasks in this project." : "Uses the people chosen under People → Assigned to by default."}</p>
         </div>
         <div className="form-actions">
           {project && (

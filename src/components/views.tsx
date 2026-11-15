@@ -4,6 +4,7 @@ import { useStore } from "../lib/store";
 import type { Person, Task } from "../lib/types";
 import { addDays, byUrgency, COLORS, firstName, greeting, isoDay, tint } from "../lib/util";
 import { TaskRow } from "./TaskList";
+import { PeoplePicks } from "./PeoplePicks";
 import { Avatar, Empty, Modal, Swatches } from "./ui";
 
 function buckets(tasks: Task[]) {
@@ -183,6 +184,18 @@ export function People() {
         </div>
         <button className="btn primary" onClick={() => setAdding(true)}><Plus size={16} />Add person</button>
       </header>
+
+      <section className="defaults-card" aria-labelledby="defaults-title">
+        <div>
+          <h2 id="defaults-title">Assigned to by default</h2>
+          <p className="field-hint">New tasks in every project start with these people. A project can choose its own list instead.</p>
+        </div>
+        <PeoplePicks
+          label="Default assignees for new tasks"
+          value={s.data.workspace.default_assignee_ids}
+          onChange={(ids) => s.setWorkspaceDefaults(ids)}
+        />
+      </section>
 
       {chosen.length > 0 && (
         <div className="bulk-bar" role="region" aria-label="Selected people">

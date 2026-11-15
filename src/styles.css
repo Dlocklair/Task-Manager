@@ -415,3 +415,20 @@ input[type="checkbox"] { width: 17px; height: 17px; accent-color: var(--primary)
 .note .rt-view { font-size: 15px; }
 .person-wrap .person-card { width: 100%; height: 100%; }
 .person-wrap:has(.person-select) .person-card { padding-right: 46px; }
+
+/* Default assignees */
+.defaults-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 16px 18px; margin: 0 0 22px; display: flex; flex-direction: column; gap: 12px; }
+.defaults-card h2 { font: 600 16px var(--body); margin-bottom: 4px; }
+.pick-list-box { border: 1px solid var(--line); border-radius: var(--r-sm); max-height: 260px; overflow-y: auto; background: var(--surface); }
+.pick-list-box .picker-row { border-bottom: 1px solid var(--line); }
+.pick-list-box .picker-row:last-child { border-bottom: 0; }
+.check-line { display: flex; align-items: center; gap: 8px; font-weight: 500; font-size: 14px; }
+.picker-row.active { background: var(--primary-soft); box-shadow: inset 3px 0 0 var(--primary); }
+
+/* Task panel: smaller text to fit more on screen, and a taller notes box that scrolls as you type */
+.detail { font-size: 13.5px; }
+.detail .title-input { font-size: 20px; }
+.detail .rt-view, .detail .rt-input, .detail .rt-empty, .detail .picker-search input, .detail .picker-name, .detail .detail-section h3 { font-size: 13.5px; }
+.detail .fields > label, .detail .person-chip, .detail .picker-foot, .detail .parent-link, .detail .picker-summary { font-size: 13px; }
+.detail .note .rt-view { font-size: 13.5px; }
+.note-form .rt-input { min-height: 126px; max-height: 60vh; overflow-y: auto; }

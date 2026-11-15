@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { Check as CheckIcon, ChevronDown, Search, X } from "lucide-react";
 import { useStore } from "../lib/store";
 import { firstName } from "../lib/util";
@@ -9,15 +9,40 @@ export function AssigneePicker({ taskId }: { taskId: string }) {
   const s = useStore();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const [active, setActive] = useState(0);
   const root = useRef<HTMLDivElement>(null);
   const assigned = s.assigned(taskId);
   const assignedIds = new Set(assigned.map((p) => p.id));
 
+  // Names that start with what you typed come first, so typing "Jo" lands on Joe before Mary Jo.
   const people = useMemo(() => {
     const q = query.trim().toLowerCase();
     const list = [...s.data.people].sort((a, b) => a.full_name.localeCompare(b.full_name));
-    return q ? list.filter((p) => p.full_name.toLowerCase().includes(q) || (p.email ?? "").toLowerCase().includes(q)) : list;
+    if (!q) return list;
+    const hits = list.filter((p) => p.full_name.toLowerCase().includes(q) || (p.email ?? "").toLowerCase().includes(q));
+    const starts = (p: (typeof list)[number]) => p.full_name.toLowerCase().split(/\s+/).some((w) => w.startsWith(q));
+    return [...hits.filter(starts), ...hits.filter((p) => !starts(p))];
   }, [s.data.people, query]);
+
+  const typing = query.trim().length > 0;
+  const pickActive = () => {
+    const person = people[active];
+    if (!person) return;
+    if (!assignedIds.has(person.id)) s.toggleAssignee(taskId, person.id);
+    setQuery("");
+    setActive(0);
+  };
+
+  // Typing selects the first match. Tab or Enter assigns it; arrow keys move the highlight.
+  const onSearchKey = (e: ReactKeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault();
+      setActive((i) => (people.length ? (i + (e.key === "ArrowDown" ? 1 : -1) + people.length) % people.length : 0));
+    } else if ((e.key === "Enter" || e.key === "Tab") && typing && people.length > 0) {
+      e.preventDefault();
+      pickActive();
+    }
+  };
 
   useEffect(() => {
     if (!open) return;
@@ -78,17 +103,24 @@ export function AssigneePicker({ taskId }: { taskId: string }) {
 
       {open && (
         <div className="picker-panel" role="listbox" aria-multiselectable="true" aria-label="People">
-          {s.data.people.length > 6 && (
-            <label className="picker-search">
-              <Search size={15} />
-              <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search people" aria-label="Search people" autoFocus />
-            </label>
-          )}
+          <label className="picker-search">
+            <Search size={15} />
+            <input
+              value={query}
+              onChange={(e) => { setQuery(e.target.value); setActive(0); }}
+              onKeyDown={onSearchKey}
+              placeholder="Type a name, then Tab or Enter"
+              aria-label="Search people"
+              autoComplete="off"
+              autoFocus
+            />
+          </label>
           <div className="picker-list">
-            {people.map((p) => {
+            {people.map((p, i) => {
               const on = assignedIds.has(p.id);
+              const highlighted = typing && i === active;
               return (
-                <label key={p.id} className={"picker-row" + (on ? " on" : "")} role="option" aria-selected={on}>
+                <label key={p.id} className={"picker-row" + (on ? " on" : "") + (highlighted ? " active" : "")} role="option" aria-selected={highlighted}>
                   <input
                     type="checkbox"
                     className="pick-box-input"

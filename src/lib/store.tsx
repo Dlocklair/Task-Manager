@@ -31,7 +31,10 @@ export interface Store {
   progress(projectId: string): { total: number; done: number; late: number; pct: number };
 
   addProject(name: string, color: string, defaultPriority: Priority): string;
-  updateProject(id: string, patch: Partial<Pick<Project, "name" | "color" | "description" | "default_priority">>): void;
+  updateProject(id: string, patch: Partial<Pick<Project, "name" | "color" | "description" | "default_priority" | "default_assignee_ids">>): void;
+  setWorkspaceDefaults(ids: string[]): void;
+  /** People who are assigned to new tasks in this project (project override, else workspace default). */
+  defaultAssigneesFor(projectId: string): Person[];
   deleteProject(id: string): void;
   addTask(input: NewTask): string;
   updateTask(id: string, patch: Partial<Pick<Task, "title" | "description" | "status" | "priority" | "due_date" | "project_id">>): void;
@@ -127,6 +130,11 @@ export function StoreProvider({ api, children }: { api: Api; children: ReactNode
     const tasks = new Map(data.tasks.map((t) => [t.id, t]));
     const me = data.people.find((p) => p.user_id === data.userId);
     const nextPos = () => Date.now();
+    const validPeople = new Set(data.people.map((p) => p.id));
+    const defaultIdsFor = (projectId: string): string[] => {
+      const project = data.projects.find((p) => p.id === projectId);
+      return (project?.default_assignee_ids ?? data.workspace.default_assignee_ids).filter((id) => validPeople.has(id));
+    };
 
     return {
       api,
@@ -151,6 +159,7 @@ export function StoreProvider({ api, children }: { api: Api; children: ReactNode
         const ids = new Set(data.assignees.filter((a) => a.person_id === personId).map((a) => a.task_id));
         return data.tasks.filter((t) => ids.has(t.id));
       },
+      defaultAssigneesFor: (projectId) => defaultIdsFor(projectId).map((id) => people.get(id)).filter((p): p is Person => !!p),
       progress: (projectId) => {
         const list = data.tasks.filter((t) => t.project_id === projectId);
         const today = isoDay();
@@ -161,13 +170,17 @@ export function StoreProvider({ api, children }: { api: Api; children: ReactNode
 
       addProject: (name, color, defaultPriority) => {
         const row = { id: uid(), workspace_id: data.workspace.id, name, color, position: nextPos(), default_priority: defaultPriority };
-        mut((d) => ({ ...d, projects: [...d.projects, { ...row, description: null, created_at: new Date().toISOString() }] }));
+        mut((d) => ({ ...d, projects: [...d.projects, { ...row, description: null, default_assignee_ids: null, created_at: new Date().toISOString() }] }));
         save(api.insert("projects", row));
         return row.id;
       },
       updateProject: (id, patch) => {
         mut((d) => ({ ...d, projects: d.projects.map((p) => (p.id === id ? { ...p, ...patch } : p)) }));
         save(api.update("projects", id, patch));
+      },
+      setWorkspaceDefaults: (ids) => {
+        mut((d) => ({ ...d, workspace: { ...d.workspace, default_assignee_ids: ids } }));
+        save(api.update("workspaces", data.workspace.id, { default_assignee_ids: ids }));
       },
       deleteProject: (id) => {
         mut((d) => ({ ...d, projects: d.projects.filter((p) => p.id !== id), tasks: d.tasks.filter((t) => t.project_id !== id) }));
@@ -188,13 +201,16 @@ export function StoreProvider({ api, children }: { api: Api; children: ReactNode
         };
         const now = new Date().toISOString();
         const local: Task = { ...row, workspace_id: data.workspace.id, description: null, completed_at: row.status === "done" ? now : null, created_at: now };
-        const assign = input.assignMe && me ? me.id : null;
+        // New tasks start with the project's default assignees (or the workspace's), plus you if asked.
+        const assignIds = [...new Set([...defaultIdsFor(input.project_id), ...(input.assignMe && me ? [me.id] : [])])];
         mut((d) => ({
           ...d,
           tasks: [...d.tasks, local],
-          assignees: assign ? [...d.assignees, { task_id: row.id, person_id: assign }] : d.assignees,
+          assignees: [...d.assignees, ...assignIds.map((person_id) => ({ task_id: row.id, person_id }))],
         }));
-        save(api.insert("tasks", row).then(() => (assign ? api.assign(row.id, assign, true) : undefined)));
+        save(
+          api.insert("tasks", row).then(() => Promise.all(assignIds.map((pid) => api.assign(row.id, pid, true))).then(() => undefined)),
+        );
         return row.id;
       },
       updateTask: (id, patch) => {
