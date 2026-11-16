@@ -632,3 +632,35 @@ input[type="checkbox"] { width: 17px; height: 17px; accent-color: var(--primary)
 
 .filter-search .search-box { flex-wrap: nowrap; }
 @media (max-width: 760px) { .filter-search .search-box { flex-wrap: wrap; } }
+
+/* Search with Include closed inside the same box, so they read as one control */
+.search-box { display: flex; align-items: center; min-width: 0; border: 1px solid var(--line); border-radius: 99px; background: var(--surface); }
+.search-box .check-inline { align-self: stretch; display: inline-flex; align-items: center; gap: 7px; padding: 0 14px; border-right: 1px solid var(--line); white-space: nowrap; font-size: 14px; font-weight: 500; color: var(--ink); }
+.search-box .search { flex: 1 1 0; width: auto; min-width: 0; border: 0; border-radius: 0; background: none; padding: 0 12px; box-shadow: none; }
+.search-box .search.is-set { box-shadow: none; }
+.search-box .check-inline.is-set { color: var(--primary); font-weight: 600; }
+.filter-top { display: flex; justify-content: flex-end; }
+.filter-top .search-box { width: 440px; max-width: 100%; }
+.filter-hide { display: flex; justify-content: flex-end; margin-top: -4px; }
+.filter-hide .check-inline { display: inline-flex; align-items: center; gap: 7px; font-size: 14px; font-weight: 500; color: var(--ink); }
+.filter-hide .check-inline input { width: 16px; height: 16px; accent-color: var(--primary); }
+
+/* Each filter group: heading on the left, lined up with the boxes beside it */
+.filter-groups { display: flex; flex-wrap: wrap; gap: 14px 28px; }
+.filter-group { display: flex; align-items: flex-end; gap: 12px; min-width: 0; }
+.filter-heading { font: 700 18px var(--display); color: var(--ink); margin: 0; min-height: 38px; display: flex; align-items: center; white-space: nowrap; }
+.filter-box .view-tools { gap: 10px 12px; }
+.filter-box .view-tools select { min-width: 150px; }
+@media (max-width: 760px) {
+  .filter-group { flex-direction: column; align-items: stretch; gap: 8px; }
+  .filter-heading { min-height: 0; font-size: 16px; }
+  .filter-top .search-box { width: 100%; }
+}
+
+/* Final layout for filter headings, Hide completed and the search box */
+.filter-group { flex-direction: row; }
+.filter-heading { text-align: left; }
+.filter-hide { justify-content: flex-start; width: 440px; max-width: 100%; margin-left: auto; padding-left: 14px; }
+.search-box .check-inline { padding: 0 10px; gap: 6px; }
+.search-box .search { padding: 0 8px 0 10px; }
+@media (max-width: 760px) { .filter-group { flex-direction: column; } }

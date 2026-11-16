@@ -18,7 +18,10 @@ interface Props {
   /** Grouping choices offered here. Empty hides the Group by control. */
   groups: GroupKey[];
   showProject: boolean;
-  /** Show the search box inside the filter panel. Pages that place search in their header turn this off. */
+  /**
+   * A project page shows its own search at the top of this panel, with Hide completed on the line under it.
+   * All tasks has its search in the page header instead, so Hide completed stays with Group/Sort.
+   */
   showSearch?: boolean;
   shown: number;
   total: number;
@@ -53,72 +56,78 @@ export function ListTools({ scope, cfg, base, onChange, search, onSearch, groups
     onSearch({ q: "", includeClosed: false });
   };
 
+  const hideCompleted = (
+    <label className="check-inline">
+      <input type="checkbox" checked={cfg.hideDone} onChange={(e) => set("hideDone", e.target.checked)} />
+      Hide completed
+    </label>
+  );
+
   return (
     <div className="filter-box" aria-label="Filters">
       {showSearch && (
-        <div className="filter-search">
+        <div className="filter-top">
           <SearchBox
             value={search.q}
             onChange={(q) => onSearch({ ...search, q })}
             includeClosed={search.includeClosed}
             onIncludeClosed={(includeClosed) => onSearch({ ...search, includeClosed })}
-            placeholder={scope === "all" ? "Search all tasks" : "Search this project"}
+            placeholder="Search this project"
           />
         </div>
       )}
+      {showSearch && <div className="filter-hide">{hideCompleted}</div>}
 
       <div className="filter-groups">
         <section className="filter-group" aria-label="Filter">
           <h3 className="filter-heading">Filter</h3>
-          <div className="view-tools">
-        <label>
-          <span>Assigned to</span>
-          <select className={hot("who")} value={cfg.who} onChange={(e) => set("who", e.target.value)}>
-            <option value="all">Everyone</option>
-            <option value="none">Nobody yet</option>
-            {people.map((p) => <option key={p.id} value={p.id}>{p.full_name}</option>)}
-          </select>
-        </label>
-        <label>
-          <span>Priority</span>
-          <select className={hot("priority")} value={cfg.priority} onChange={(e) => set("priority", e.target.value)}>
-            <option value="all">Any priority</option>
-            {PRIORITIES.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}
-          </select>
-        </label>
-        {showProject && (
-          <label>
-            <span>Project</span>
-            <select className={hot("project")} value={cfg.project} onChange={(e) => set("project", e.target.value)}>
-              <option value="all">All projects</option>
-              {s.data.projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-            </select>
-          </label>
-        )}
+          <div className="view-tools" role="group" aria-label="Filter tasks">
+            <label>
+              <span>Assigned to</span>
+              <select className={hot("who")} value={cfg.who} onChange={(e) => set("who", e.target.value)}>
+                <option value="all">Everyone</option>
+                <option value="none">Nobody yet</option>
+                {people.map((p) => <option key={p.id} value={p.id}>{p.full_name}</option>)}
+              </select>
+            </label>
+            <label>
+              <span>Priority</span>
+              <select className={hot("priority")} value={cfg.priority} onChange={(e) => set("priority", e.target.value)}>
+                <option value="all">Any priority</option>
+                {PRIORITIES.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}
+              </select>
+            </label>
+            {showProject && (
+              <label>
+                <span>Project</span>
+                <select className={hot("project")} value={cfg.project} onChange={(e) => set("project", e.target.value)}>
+                  <option value="all">All projects</option>
+                  {s.data.projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+              </label>
+            )}
           </div>
         </section>
+
         <section className="filter-group" aria-label="Group and sort">
           <h3 className="filter-heading">Group/Sort</h3>
-          <div className="view-tools">
-        {groups.length > 0 && (
-          <label>
-            <span>Group by</span>
-            <select className={hot("groupBy")} value={cfg.groupBy} onChange={(e) => set("groupBy", e.target.value as GroupKey)}>
-              {GROUP_OPTIONS.filter((g) => groups.includes(g.id)).map((g) => <option key={g.id} value={g.id}>{g.label}</option>)}
-            </select>
-          </label>
-        )}
-        <label>
-          <span>Sort by</span>
-          <select className={hot("sortBy")} value={cfg.sortBy} onChange={(e) => set("sortBy", e.target.value as ListConfig["sortBy"])}>
-            {SORT_OPTIONS.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
-          </select>
-        </label>
-        <label className="check-inline">
-          <input type="checkbox" checked={cfg.hideDone} onChange={(e) => set("hideDone", e.target.checked)} />
-          Hide completed
-        </label>
-        <span className="view-count">Showing {shown} of {total}</span>
+          <div className="view-tools" role="group" aria-label="Group and sort tasks">
+            {groups.length > 0 && (
+              <label>
+                <span>Group by</span>
+                <select className={hot("groupBy")} value={cfg.groupBy} onChange={(e) => set("groupBy", e.target.value as GroupKey)}>
+                  {GROUP_OPTIONS.filter((g) => groups.includes(g.id)).map((g) => <option key={g.id} value={g.id}>{g.label}</option>)}
+                </select>
+              </label>
+            )}
+            <label>
+              <span>Sort by</span>
+              <select className={hot("sortBy")} value={cfg.sortBy} onChange={(e) => set("sortBy", e.target.value as ListConfig["sortBy"])}>
+                {SORT_OPTIONS.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
+              </select>
+            </label>
+            {!showSearch && hideCompleted}
+            <span className="view-count">Showing {shown} of {total}</span>
           </div>
         </section>
       </div>

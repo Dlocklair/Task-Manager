@@ -245,7 +245,6 @@ export function People() {
         </div>
         <span className="header-actions">
           <button className="btn primary" onClick={() => setAdding(true)}><Plus size={16} />Add person</button>
-          <TopActions />
         </span>
       </header>
 
