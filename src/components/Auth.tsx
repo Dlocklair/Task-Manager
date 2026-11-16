@@ -2,7 +2,7 @@ import { useState, type FormEvent } from "react";
 import { MailCheck } from "lucide-react";
 import { sb } from "../lib/supabase";
 
-export function Auth() {
+export function Auth({ onUseDevice }: { onUseDevice?: () => void }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [usePassword, setUsePassword] = useState(false);
@@ -80,6 +80,13 @@ export function Auth() {
             <button className="link" type="button" onClick={() => { setUsePassword(!usePassword); setError(null); }}>
               {usePassword ? "Sign in with an email link instead" : "Sign in with a password instead"}
             </button>
+            {onUseDevice && (
+              <div className="device-option">
+                <p className="field-hint">No account needed for this one.</p>
+                <button className="btn big" type="button" onClick={onUseDevice}>Use on this device only</button>
+                <p className="field-hint">Your tasks are saved only in this browser on this device. Nothing is sent to a server, and no other device or person can see them.</p>
+              </div>
+            )}
             <a className="link" href="?demo">Look around with sample data</a>
           </form>
         )}

@@ -98,6 +98,8 @@ export type Table = "workspaces" | "projects" | "tasks" | "people" | "task_comme
 /** Everything the app needs from a backend. Supabase and the demo both implement it. */
 export interface Api {
   demo: boolean;
+  /** True for the device-only copy. Nothing is sent to a server. */
+  local?: boolean;
   load(): Promise<Data>;
   insert(table: Table, row: Record<string, unknown>): Promise<void>;
   update(table: Table, id: string, patch: Record<string, unknown>): Promise<void>;

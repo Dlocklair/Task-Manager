@@ -49,8 +49,12 @@ export function Sidebar({ onNewProject, onSignOut }: { onNewProject(): void; onS
 
       <div className="side-foot">
         {s.me && <Avatar person={s.me} size={30} />}
-        <span className="grow who">{s.me?.full_name ?? s.data.email}{s.api.demo && <small>Sample data, nothing is saved</small>}</span>
-        {onSignOut && <button className="icon-btn on-dark" onClick={onSignOut} aria-label="Sign out" title="Sign out"><LogOut size={17} /></button>}
+        <span className="grow who">{s.me?.full_name ?? s.data.email}{s.api.demo && <small>Sample data, nothing is saved</small>}{s.api.local && <small>Saved on this device only</small>}</span>
+        {onSignOut && (
+          <button className="icon-btn on-dark" onClick={onSignOut} aria-label={s.api.local ? "Leave device-only mode" : "Sign out"} title={s.api.local ? "Leave device-only mode and sign in" : "Sign out"}>
+            <LogOut size={17} />
+          </button>
+        )}
       </div>
     </nav>
   );

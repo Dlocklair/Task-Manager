@@ -4,6 +4,7 @@ import type { Session } from "@supabase/supabase-js";
 import { demoApi } from "./lib/demo";
 import { StoreProvider, useStore } from "./lib/store";
 import { sb, supabaseApi } from "./lib/supabase";
+import { deviceApi } from "./lib/device";
 import type { Project } from "./lib/types";
 import { Auth } from "./components/Auth";
 import { ProjectView } from "./components/ProjectView";
@@ -16,9 +17,13 @@ import { Home, MyTasks, People, Projects } from "./components/views";
 import { AllTasks } from "./components/AllTasks";
 
 const demo = !sb || new URLSearchParams(window.location.search).has("demo");
+const DEVICE_KEY = "task-manager-device-mode";
+// Device-only mode is off unless VITE_DEVICE_MODE=1 is set at build time. Beta testers use the cloud version.
+const deviceEnabled = import.meta.env.VITE_DEVICE_MODE === "1";
 
 export default function App() {
   const [session, setSession] = useState<Session | null | undefined>(demo ? null : undefined);
+  const [device, setDevice] = useState(() => deviceEnabled && localStorage.getItem(DEVICE_KEY) === "1");
 
   useEffect(() => {
     if (demo || !sb) return;
@@ -28,8 +33,17 @@ export default function App() {
   }, []);
 
   if (demo) return <StoreProvider api={demoApi}><Workspace /></StoreProvider>;
+  if (device) {
+    return (
+      <StoreProvider api={deviceApi} key="device">
+        <Workspace onSignOut={() => { localStorage.removeItem(DEVICE_KEY); setDevice(false); }} />
+      </StoreProvider>
+    );
+  }
   if (session === undefined) return <div className="center-screen"><div className="spinner" aria-label="Loading" /></div>;
-  if (!session) return <Auth />;
+  if (!session) {
+    return <Auth onUseDevice={deviceEnabled ? () => { localStorage.setItem(DEVICE_KEY, "1"); setDevice(true); } : undefined} />;
+  }
   return (
     <StoreProvider api={supabaseApi} key={session.user.id}>
       <Workspace onSignOut={() => void sb!.auth.signOut()} />
