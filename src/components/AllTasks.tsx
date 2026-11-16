@@ -49,7 +49,7 @@ export function AllTasks() {
       ) : tasks.length === 0 ? (
         <Empty title="No tasks match">Clear the search or filters above to see more.</Empty>
       ) : (
-        <TaskSections sections={sections} groupBy={cfg.groupBy} showProject={cfg.groupBy !== "project"} openDone={search.includeClosed && search.q.trim().length > 0} />
+        <TaskSections sections={sections} groupBy={cfg.groupBy} showProject={cfg.groupBy !== "project"} openDone={search.includeClosed && search.q.trim().length > 0} reorderable={cfg.sortBy === "priority"} />
       )}
     </div>
   );

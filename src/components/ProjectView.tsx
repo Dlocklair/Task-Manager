@@ -100,7 +100,7 @@ export function ProjectView({ project, onEdit }: { project: Project; onEdit(): v
       ) : tasks.length === 0 ? (
         <Empty title="No tasks match">Clear the search or filters above to see more.</Empty>
       ) : mode === "list" ? (
-        <TaskSections sections={sections} groupBy={cfg.groupBy} openDone={search.includeClosed && search.q.trim().length > 0} />
+        <TaskSections sections={sections} groupBy={cfg.groupBy} openDone={search.includeClosed && search.q.trim().length > 0} reorderable={cfg.sortBy === "priority"} />
       ) : (
         <Board groups={board} projectId={project.id} />
       )}

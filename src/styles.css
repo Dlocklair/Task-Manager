@@ -710,3 +710,8 @@ input[type="checkbox"] { width: 17px; height: 17px; accent-color: var(--primary)
   .filter-box:not(.grid-layout) .view-tools select { min-width: 140px; }
   .filter-box:not(.grid-layout) .filter-group[aria-label="Group and sort"] .view-tools { flex-wrap: nowrap; }
 }
+
+/* Drag-to-reorder: a line shows where the dragged task will land (only when sorted by priority) */
+.row.drop-before { box-shadow: inset 0 2px 0 var(--primary); }
+.row.drop-after { box-shadow: inset 0 -2px 0 var(--primary); }
+.rows > .row[draggable="true"] { cursor: grab; }

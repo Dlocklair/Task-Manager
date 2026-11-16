@@ -1,13 +1,29 @@
-import { useState, type FormEvent } from "react";
+import { useState, type DragEvent, type FormEvent } from "react";
 import { ChevronRight, ListTree, Plus } from "lucide-react";
 import { useStore } from "../lib/store";
 import type { Task } from "../lib/types";
 import { tint } from "../lib/util";
 import { AvatarStack, Check, DueBadge, PriorityFlag } from "./ui";
 
-export function TaskRow({ task, depth = 0, showProject = false }: { task: Task; depth?: number; showProject?: boolean }) {
+/**
+ * Drop position for a dragged task placed just above or below `target`. `siblings` is the visible list
+ * in its current order; the dragged task is skipped so it does not count as its own neighbour.
+ */
+function placeBetween(siblings: Task[], dragId: string, target: Task, edge: "before" | "after"): number {
+  const others = siblings.filter((t) => t.id !== dragId);
+  const i = others.findIndex((t) => t.id === target.id);
+  if (edge === "before") {
+    const prev = others[i - 1];
+    return prev ? (prev.position + target.position) / 2 : target.position - 1;
+  }
+  const next = others[i + 1];
+  return next ? (target.position + next.position) / 2 : target.position + 1;
+}
+
+export function TaskRow({ task, depth = 0, showProject = false, reorder }: { task: Task; depth?: number; showProject?: boolean; reorder?: Task[] }) {
   const s = useStore();
   const [open, setOpen] = useState(false);
+  const [edge, setEdge] = useState<"before" | "after" | null>(null);
   const kids = s.kids(task.id);
   const project = s.project(task.project_id);
   const done = task.status === "done";
@@ -17,8 +33,33 @@ export function TaskRow({ task, depth = 0, showProject = false }: { task: Task; 
   return (
     <>
       <div
-        className={"row" + (done ? " is-done" : "") + (s.selectedId === task.id ? " is-selected" : "") + (picked ? " is-picked" : "")}
+        className={"row" + (done ? " is-done" : "") + (s.selectedId === task.id ? " is-selected" : "") + (picked ? " is-picked" : "") + (edge ? ` drop-${edge}` : "")}
         style={{ ...tint(project?.color ?? "#5B6B86"), paddingLeft: 10 + depth * 28 }}
+        draggable={!!reorder}
+        onDragStart={(e) => {
+          if (!reorder) return;
+          e.dataTransfer.setData("text/task", task.id);
+          e.dataTransfer.effectAllowed = "move";
+        }}
+        onDragOver={(e: DragEvent<HTMLDivElement>) => {
+          if (!reorder || !e.dataTransfer.types.includes("text/task")) return;
+          e.preventDefault();
+          const box = e.currentTarget.getBoundingClientRect();
+          setEdge(e.clientY < box.top + box.height / 2 ? "before" : "after");
+        }}
+        onDragLeave={() => setEdge(null)}
+        onDrop={(e) => {
+          if (!reorder) return;
+          e.preventDefault();
+          const id = e.dataTransfer.getData("text/task");
+          const where = edge ?? "after";
+          setEdge(null);
+          const dragged = id ? s.task(id) : undefined;
+          if (!dragged || dragged.id === task.id) return;
+          // Dropping onto another priority moves the task into that priority.
+          const change = dragged.priority !== task.priority ? { priority: task.priority } : {};
+          s.updateTask(dragged.id, { position: placeBetween(reorder, dragged.id, task, where), ...change });
+        }}
         onClick={() => s.openTask(task.id)}
         onKeyDown={(e) => e.key === "Enter" && e.target === e.currentTarget && s.openTask(task.id)}
         tabIndex={0}

@@ -122,7 +122,8 @@ export function reminderMoment(task: { due_date: string | null; due_time: string
 export function sortCompare(key: "due" | "priority" | "assigned" | "name", assignedName: (taskId: string) => string): (a: Task, b: Task) => number {
   switch (key) {
     case "priority":
-      return (a, b) => PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority] || byUrgency(a, b);
+      // Priority first, then the order you dragged tasks into.
+      return (a, b) => PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority] || a.position - b.position;
     case "assigned":
       return (a, b) => {
         const an = assignedName(a.id), bn = assignedName(b.id);

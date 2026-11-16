@@ -12,7 +12,7 @@ interface NewTask {
   assignMe?: boolean;
 }
 
-type TaskPatch = Partial<Pick<Task, "title" | "description" | "status" | "priority" | "context" | "due_date" | "due_time" | "remind_before_minutes" | "project_id">>;
+type TaskPatch = Partial<Pick<Task, "title" | "description" | "status" | "priority" | "context" | "due_date" | "due_time" | "remind_before_minutes" | "project_id" | "position">>;
 
 export interface Store {
   api: Api;
@@ -63,7 +63,7 @@ export interface Store {
   defaultAssigneesFor(projectId: string): Person[];
   deleteProject(id: string): void;
   addTask(input: NewTask): string;
-  updateTask(id: string, patch: Partial<Pick<Task, "title" | "description" | "status" | "priority" | "context" | "due_date" | "due_time" | "remind_before_minutes" | "project_id">>): void;
+  updateTask(id: string, patch: Partial<Pick<Task, "title" | "description" | "status" | "priority" | "context" | "due_date" | "due_time" | "remind_before_minutes" | "project_id" | "position">>): void;
   deleteTask(id: string): void;
   toggleAssignee(taskId: string, personId: string): void;
   addPerson(name: string, email: string | null, color?: string): void;
