@@ -12,7 +12,7 @@ interface NewTask {
   assignMe?: boolean;
 }
 
-type TaskPatch = Partial<Pick<Task, "title" | "description" | "status" | "priority" | "due_date" | "due_time" | "remind_before_minutes" | "project_id">>;
+type TaskPatch = Partial<Pick<Task, "title" | "description" | "status" | "priority" | "context" | "due_date" | "due_time" | "remind_before_minutes" | "project_id">>;
 
 export interface Store {
   api: Api;
@@ -41,7 +41,7 @@ export interface Store {
   toggleSelect(id: string): void;
   selectMany(ids: string[], on: boolean): void;
   clearSelection(): void;
-  bulkUpdate(ids: string[], patch: Partial<Pick<Task, "status" | "priority" | "due_date" | "due_time" | "remind_before_minutes" | "project_id">>): void;
+  bulkUpdate(ids: string[], patch: Partial<Pick<Task, "status" | "priority" | "context" | "due_date" | "due_time" | "remind_before_minutes" | "project_id">>): void;
   bulkAssign(ids: string[], personId: string, on: boolean): void;
   bulkDelete(ids: string[]): void;
 
@@ -63,7 +63,7 @@ export interface Store {
   defaultAssigneesFor(projectId: string): Person[];
   deleteProject(id: string): void;
   addTask(input: NewTask): string;
-  updateTask(id: string, patch: Partial<Pick<Task, "title" | "description" | "status" | "priority" | "due_date" | "due_time" | "remind_before_minutes" | "project_id">>): void;
+  updateTask(id: string, patch: Partial<Pick<Task, "title" | "description" | "status" | "priority" | "context" | "due_date" | "due_time" | "remind_before_minutes" | "project_id">>): void;
   deleteTask(id: string): void;
   toggleAssignee(taskId: string, personId: string): void;
   addPerson(name: string, email: string | null, color?: string): void;
@@ -377,7 +377,7 @@ export function StoreProvider({ api, children }: { api: Api; children: ReactNode
           position: nextPos(),
         };
         const now = new Date().toISOString();
-        const local: Task = { ...row, workspace_id: data.workspace.id, description: null, completed_at: row.status === "done" ? now : null, created_at: now };
+        const local: Task = { ...row, context: null, workspace_id: data.workspace.id, description: null, completed_at: row.status === "done" ? now : null, created_at: now };
         // New tasks start with the project's default assignees (or the workspace's), plus you if asked.
         const assignIds = [...new Set([...defaultIdsFor(input.project_id), ...(input.assignMe && me ? [me.id] : [])])];
         mut((d) => ({

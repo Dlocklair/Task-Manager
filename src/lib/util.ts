@@ -1,5 +1,5 @@
 import type { CSSProperties } from "react";
-import type { Priority, Status, Task } from "./types";
+import type { Priority, Status, Task, TaskContext } from "./types";
 
 export const COLORS = ["#3157E0", "#0B8478", "#2F8540", "#B26A00", "#D4472F", "#B8357F", "#6F47D0", "#55657F"];
 
@@ -15,6 +15,15 @@ export const PRIORITIES: { id: Priority; label: string }[] = [
   { id: "medium", label: "Medium" },
   { id: "high", label: "High" },
   { id: "urgent", label: "Urgent" },
+];
+
+/** Where or how a task can be done. Filter by these when you are away from your computer. */
+export const CONTEXTS: { id: TaskContext; label: string }[] = [
+  { id: "computer", label: "Computer" },
+  { id: "phone", label: "Phone" },
+  { id: "home", label: "Home" },
+  { id: "errands", label: "Errands" },
+  { id: "car", label: "Car" },
 ];
 
 const PRIORITY_RANK: Record<Priority, number> = { urgent: 0, high: 1, medium: 2, low: 3, none: 4 };

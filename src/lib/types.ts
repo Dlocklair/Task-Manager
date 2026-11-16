@@ -1,5 +1,7 @@
 export type Status = "todo" | "in_progress" | "blocked" | "review" | "done";
 export type Priority = "none" | "low" | "medium" | "high" | "urgent";
+/** Where or how a task can be done. Null means no context. */
+export type TaskContext = "computer" | "phone" | "home" | "errands" | "car";
 
 export interface Project {
   id: string;
@@ -32,6 +34,7 @@ export interface Task {
   description: string | null;
   status: Status;
   priority: Priority;
+  context: TaskContext | null;
   due_date: string | null;
   /** Time of day it is due (HH:MM). Null means 9:00 AM. */
   due_time: string | null;
@@ -73,6 +76,8 @@ export type ListConfig = {
   who: string;
   /** "all" or a priority */
   priority: string;
+  /** "all", "none" (no context) or a context */
+  context: string;
   /** "all" or a project id. Used on All tasks only. */
   project: string;
   hideDone: boolean;

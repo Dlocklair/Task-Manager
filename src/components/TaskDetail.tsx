@@ -1,8 +1,8 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { ArrowLeft, CornerLeftUp, Trash2, X } from "lucide-react";
 import { useStore } from "../lib/store";
-import type { Note, Priority, Task } from "../lib/types";
-import { PRIORITIES, STATUSES, step, tint } from "../lib/util";
+import type { Note, Priority, Task, TaskContext } from "../lib/types";
+import { CONTEXTS, PRIORITIES, STATUSES, step, tint } from "../lib/util";
 import { AssigneePicker } from "./AssigneePicker";
 import { RichEditor, RichField, RichView } from "./RichText";
 import { QuickAdd } from "./TaskList";
@@ -105,6 +105,12 @@ export function TaskDetail({ task }: { task: Task }) {
           <label htmlFor="f-prio">Priority</label>
           <select id="f-prio" value={task.priority} onChange={(e) => s.updateTask(task.id, { priority: e.target.value as Priority })}>
             {PRIORITIES.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}
+          </select>
+
+          <label htmlFor="f-ctx">Context</label>
+          <select id="f-ctx" value={task.context ?? ""} onChange={(e) => s.updateTask(task.id, { context: (e.target.value || null) as TaskContext | null })}>
+            <option value="">No context</option>
+            {CONTEXTS.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
           </select>
 
           <label htmlFor="f-proj">Project</label>

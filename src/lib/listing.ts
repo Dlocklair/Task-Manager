@@ -1,9 +1,10 @@
 import type { GroupKey, ListConfig, Person, Priority, Project, SortKey, Task } from "./types";
-import { addDays, isoDay, PRIORITIES, sortCompare, STATUSES, step } from "./util";
+import { addDays, CONTEXTS, isoDay, PRIORITIES, sortCompare, STATUSES, step } from "./util";
 
 export const DEFAULT_CONFIG: ListConfig = {
   who: "all",
   priority: "all",
+  context: "all",
   project: "all",
   // Finished tasks are hidden unless you ask for them.
   hideDone: true,
@@ -82,6 +83,7 @@ export function applyFilters(tasks: Task[], cfg: ListConfig, ctx: ListContext, s
       return false;
     }
     if (cfg.priority !== "all" && t.priority !== cfg.priority) return false;
+    if (cfg.context !== "all" && (t.context ?? "none") !== cfg.context) return false;
     if (cfg.project !== "all" && t.project_id !== cfg.project) return false;
     if (cfg.who === "all") return true;
     const people = ctx.assigned(t.id);
@@ -189,6 +191,7 @@ export function activeFilters(cfg: ListConfig, base: ListConfig, ctx: ListContex
     out.push(`Assigned to: ${name}`);
   }
   if (cfg.priority !== base.priority) out.push(`Priority: ${PRIORITIES.find((p) => p.id === cfg.priority)?.label ?? cfg.priority}`);
+  if (cfg.context !== base.context) out.push(`Context: ${cfg.context === "none" ? "No context" : (CONTEXTS.find((c) => c.id === cfg.context)?.label ?? cfg.context)}`);
   if (cfg.project !== base.project) out.push(`Project: ${ctx.projects.find((p) => p.id === cfg.project)?.name ?? "Unknown"}`);
   if (cfg.groupBy !== base.groupBy) out.push(`Grouped by: ${GROUP_OPTIONS.find((g) => g.id === cfg.groupBy)?.label ?? cfg.groupBy}`);
   if (cfg.sortBy !== base.sortBy) out.push(`Sorted by: ${SORT_OPTIONS.find((o) => o.id === cfg.sortBy)?.label ?? cfg.sortBy}`);

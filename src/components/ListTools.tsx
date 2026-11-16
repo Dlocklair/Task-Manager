@@ -3,7 +3,7 @@ import { Bookmark, X } from "lucide-react";
 import { useStore } from "../lib/store";
 import { activeFilters, GROUP_OPTIONS, isChanged, normalise, SORT_OPTIONS, sameConfig, type TextSearch } from "../lib/listing";
 import type { GroupKey, ListConfig } from "../lib/types";
-import { PRIORITIES } from "../lib/util";
+import { CONTEXTS, PRIORITIES } from "../lib/util";
 import { SearchBox } from "./SearchBox";
 
 interface Props {
@@ -56,6 +56,21 @@ export function ListTools({ scope, cfg, base, onChange, search, onSearch, groups
     onSearch({ q: "", includeClosed: false });
   };
 
+  // Context sits after Priority on a project page, and after Project on All tasks.
+  const contextField = (
+    <label data-ctl="context">
+      <span>Context</span>
+      <select className={hot("context")} value={cfg.context} onChange={(e) => set("context", e.target.value)}>
+        <option value="all">Any context</option>
+        <option value="none">No context</option>
+        {CONTEXTS.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
+      </select>
+    </label>
+  );
+
+  // On a project page the count sits on the Hide completed line, so Sort by can end the Group/Sort block.
+  const count = <span className="view-count">Showing {shown} of {total}</span>;
+
   const hideCompleted = (
     <label className="check-inline">
       <input type="checkbox" checked={cfg.hideDone} onChange={(e) => set("hideDone", e.target.checked)} />
@@ -76,13 +91,13 @@ export function ListTools({ scope, cfg, base, onChange, search, onSearch, groups
           />
         </div>
       )}
-      {showSearch && <div className="filter-hide">{hideCompleted}</div>}
+      {showSearch && <div className="filter-hide">{hideCompleted}{count}</div>}
 
       <div className="filter-groups">
         <section className="filter-group" aria-label="Filter">
           <h3 className="filter-heading">Filter</h3>
           <div className="view-tools" role="group" aria-label="Filter tasks">
-            <label>
+            <label data-ctl="who">
               <span>Assigned to</span>
               <select className={hot("who")} value={cfg.who} onChange={(e) => set("who", e.target.value)}>
                 <option value="all">Everyone</option>
@@ -90,15 +105,16 @@ export function ListTools({ scope, cfg, base, onChange, search, onSearch, groups
                 {people.map((p) => <option key={p.id} value={p.id}>{p.full_name}</option>)}
               </select>
             </label>
-            <label>
+            <label data-ctl="priority">
               <span>Priority</span>
               <select className={hot("priority")} value={cfg.priority} onChange={(e) => set("priority", e.target.value)}>
                 <option value="all">Any priority</option>
                 {PRIORITIES.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}
               </select>
             </label>
+            {!showProject && contextField}
             {showProject && (
-              <label>
+              <label data-ctl="project">
                 <span>Project</span>
                 <select className={hot("project")} value={cfg.project} onChange={(e) => set("project", e.target.value)}>
                   <option value="all">All projects</option>
@@ -106,6 +122,7 @@ export function ListTools({ scope, cfg, base, onChange, search, onSearch, groups
                 </select>
               </label>
             )}
+            {showProject && contextField}
           </div>
         </section>
 
@@ -113,21 +130,21 @@ export function ListTools({ scope, cfg, base, onChange, search, onSearch, groups
           <h3 className="filter-heading">Group/Sort</h3>
           <div className="view-tools" role="group" aria-label="Group and sort tasks">
             {groups.length > 0 && (
-              <label>
+              <label data-ctl="group">
                 <span>Group by</span>
                 <select className={hot("groupBy")} value={cfg.groupBy} onChange={(e) => set("groupBy", e.target.value as GroupKey)}>
                   {GROUP_OPTIONS.filter((g) => groups.includes(g.id)).map((g) => <option key={g.id} value={g.id}>{g.label}</option>)}
                 </select>
               </label>
             )}
-            <label>
+            <label data-ctl="sort">
               <span>Sort by</span>
               <select className={hot("sortBy")} value={cfg.sortBy} onChange={(e) => set("sortBy", e.target.value as ListConfig["sortBy"])}>
                 {SORT_OPTIONS.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
               </select>
             </label>
             {!showSearch && hideCompleted}
-            <span className="view-count">Showing {shown} of {total}</span>
+            {!showSearch && count}
           </div>
         </section>
       </div>

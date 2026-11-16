@@ -30,7 +30,7 @@ export const supabaseApi: Api = {
       client.from("workspaces").select("id,name,default_assignee_ids").eq("id", wsId).single(),
       client.from("projects").select("id,workspace_id,name,description,color,position,default_priority,default_assignee_ids,category_id,created_at").eq("workspace_id", wsId).neq("status", "archived").order("position"),
       client.from("categories").select("id,workspace_id,name,created_at").eq("workspace_id", wsId).order("created_at"),
-      client.from("tasks").select("id,workspace_id,project_id,parent_task_id,title,description,status,priority,due_date,due_time,remind_before_minutes,position,completed_at,created_at").eq("workspace_id", wsId).order("position").limit(5000),
+      client.from("tasks").select("id,workspace_id,project_id,parent_task_id,title,description,status,priority,context,due_date,due_time,remind_before_minutes,position,completed_at,created_at").eq("workspace_id", wsId).order("position").limit(5000),
       client.from("people").select("id,workspace_id,user_id,full_name,email,color").eq("workspace_id", wsId).eq("is_archived", false).order("created_at"),
       client.from("task_assignees").select("task_id,person_id").limit(10000),
       client.from("saved_filters").select("id,workspace_id,owner_id,name,scope,config,created_at").eq("workspace_id", wsId).order("created_at"),

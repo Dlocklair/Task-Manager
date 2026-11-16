@@ -1,8 +1,17 @@
-import type { Api, Data, Note, Person, Project, Task } from "./types";
+import type { Api, Data, Note, Person, Project, Task, TaskContext } from "./types";
 import { addDays, COLORS } from "./util";
 
 // Sample data for looking around without an account. Nothing is saved.
 const WS = "demo-workspace";
+
+/** Some sample tasks carry a context so the filter has something to show. */
+const DEMO_CONTEXT: Record<string, TaskContext> = {
+  "Get two quotes for the countertop": "phone",
+  "Order cabinets": "computer",
+  "Deep clean before the next guests": "home",
+  "Restock coffee and soap": "errands",
+  "Fix the sticking deck door": "car",
+};
 
 function build(): Data {
   const now = new Date().toISOString();
@@ -34,6 +43,7 @@ function build(): Data {
     const id = `t-${++n}`;
     tasks.push({
       id, workspace_id: WS, project_id: project, parent_task_id: parent, title, description, status, priority,
+      context: DEMO_CONTEXT[title] ?? null,
       due_date: due === null ? null : addDays(due), due_time: null, remind_before_minutes: null, position: n, completed_at: status === "done" ? now : null, created_at: now,
     });
     who.forEach((p) => assignees.push({ task_id: id, person_id: p }));

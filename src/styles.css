@@ -666,7 +666,7 @@ input[type="checkbox"] { width: 17px; height: 17px; accent-color: var(--primary)
 @media (max-width: 760px) { .filter-group { flex-direction: column; } }
 
 /* All tasks: one grid so Assigned to lines up with Group by, and Priority with Sort by */
-.filter-box.grid-layout .filter-groups { display: grid; grid-template-columns: max-content repeat(3, minmax(150px, 180px)) max-content; column-gap: 14px; row-gap: 14px; align-items: end; }
+.filter-box.grid-layout .filter-groups { display: grid; grid-template-columns: max-content repeat(4, minmax(150px, 180px)); column-gap: 14px; row-gap: 14px; align-items: end; }
 .filter-box.grid-layout .filter-group, .filter-box.grid-layout .view-tools { display: contents; }
 .filter-box.grid-layout .filter-heading { align-self: end; }
 .filter-box.grid-layout .view-tools select { width: 100%; min-width: 0; }
@@ -699,3 +699,14 @@ input[type="checkbox"] { width: 17px; height: 17px; accent-color: var(--primary)
 .cat-count, .cat-projects small, .cat-projects .field-hint { color: var(--ink-2); }
 .modal .field-hint, .modal h2 { color: var(--ink); }
 .modal .field-hint { color: var(--ink-2); }
+
+/* Context is the fifth column on All tasks: Assigned, Priority, Project, Context under Filter */
+.grid-layout .filter-group[aria-label="Filter"] .view-tools > :nth-child(4) { grid-column: 5; grid-row: 1; }
+
+/* Project page: Filter on the left, Group/Sort on the right so Sort by ends under the search box */
+.filter-box:not(.grid-layout) .filter-group[aria-label="Group and sort"] { margin-left: auto; }
+@media (min-width: 761px) {
+  .filter-box:not(.grid-layout) .filter-groups { flex-wrap: nowrap; column-gap: 24px; }
+  .filter-box:not(.grid-layout) .view-tools select { min-width: 140px; }
+  .filter-box:not(.grid-layout) .filter-group[aria-label="Group and sort"] .view-tools { flex-wrap: nowrap; }
+}

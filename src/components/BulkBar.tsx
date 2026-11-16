@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { X } from "lucide-react";
 import { useStore } from "../lib/store";
-import { PRIORITIES, STATUSES } from "../lib/util";
-import type { Priority, Status } from "../lib/types";
+import { CONTEXTS, PRIORITIES, STATUSES } from "../lib/util";
+import type { Priority, Status, TaskContext } from "../lib/types";
 
 /** Appears when tasks are selected. Each control applies to every selected task at once. */
 export function BulkBar() {
@@ -42,6 +42,14 @@ export function BulkBar() {
         <select value="" onChange={(e) => e.target.value && s.bulkUpdate(ids, { priority: e.target.value as Priority })}>
           <option value="">Choose…</option>
           {PRIORITIES.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}
+        </select>
+      </label>
+
+      <label className="bulk-field">
+        <span>Context</span>
+        <select value="" onChange={(e) => e.target.value && s.bulkUpdate(ids, { context: e.target.value as TaskContext })}>
+          <option value="">Choose…</option>
+          {CONTEXTS.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
         </select>
       </label>
 
