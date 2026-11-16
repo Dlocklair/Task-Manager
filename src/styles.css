@@ -522,3 +522,13 @@ input[type="checkbox"] { width: 17px; height: 17px; accent-color: var(--primary)
 .search-box .check-inline { display: inline-flex; align-items: center; gap: 7px; font-size: 14px; font-weight: 500; color: var(--ink); }
 .search-box .check-inline input { width: 16px; height: 16px; accent-color: var(--primary); }
 .search-box .check-inline.is-set { color: var(--primary); font-weight: 600; }
+
+/* Top bar actions, person edit, banner actions, disabled actions */
+.top-actions { display: flex; align-items: center; gap: 10px; }
+.main-top .btn { white-space: nowrap; }
+.banner-actions { display: flex; align-items: center; gap: 8px; }
+.banner-actions a.icon-btn { display: inline-flex; align-items: center; justify-content: center; }
+.person-wrap { position: relative; }
+.person-edit { position: absolute; bottom: 10px; right: 10px; z-index: 1; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 99px; background: var(--surface); border: 1px solid var(--line); color: var(--ink-2); }
+.person-edit:hover { color: var(--primary); border-color: var(--primary); }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }

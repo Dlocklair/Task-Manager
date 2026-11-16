@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Plus } from "lucide-react";
+import { ListChecks, Plus } from "lucide-react";
 import type { Session } from "@supabase/supabase-js";
 import { demoApi } from "./lib/demo";
 import { StoreProvider, useStore } from "./lib/store";
@@ -51,7 +51,12 @@ function Workspace({ onSignOut }: { onSignOut?: () => void }) {
       <main className="main">
         {!selected && (
           <div className="main-top">
-            <button className="new-task" onClick={() => setNewTask(true)}><Plus size={18} />New task</button>
+            <div className="top-actions">
+              <button className={"btn" + (s.selecting ? " primary" : "")} aria-pressed={s.selecting} onClick={() => s.setSelecting(!s.selecting)}>
+                <ListChecks size={17} />{s.selecting ? "Done selecting" : "Select multiple"}
+              </button>
+              <button className="new-task" onClick={() => setNewTask(true)}><Plus size={18} />New task</button>
+            </div>
           </div>
         )}
         {s.view.kind === "home" && <Home onNewProject={newProject} />}

@@ -35,6 +35,9 @@ export interface Store {
 
   /** Multi-select for bulk edits. */
   selection: Set<string>;
+  /** Checkboxes are hidden until you choose to select several items at once. */
+  selecting: boolean;
+  setSelecting(on: boolean): void;
   toggleSelect(id: string): void;
   selectMany(ids: string[], on: boolean): void;
   clearSelection(): void;
@@ -70,6 +73,11 @@ export interface Store {
 
 const Ctx = createContext<Store | null>(null);
 
+/** Every screen starts at the top when you move to it. The main column is the scrolling element. */
+function toTop() {
+  document.querySelector<HTMLElement>(".main")?.scrollTo({ top: 0 });
+}
+
 export function useStore(): Store {
   const s = useContext(Ctx);
   if (!s) throw new Error("Store is not ready");
@@ -99,6 +107,7 @@ export function StoreProvider({ api, children }: { api: Api; children: ReactNode
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [selection, setSelection] = useState<Set<string>>(new Set());
+  const [selecting, setSelectingState] = useState(false);
   const [pendingLeave, setPendingLeave] = useState<Store["pendingLeave"]>(null);
   const toastTimer = useRef<number>();
 
@@ -205,6 +214,8 @@ export function StoreProvider({ api, children }: { api: Api; children: ReactNode
           setView(v);
           setSelectedId(null);
           setSelection(new Set());
+          setSelectingState(false);
+          toTop();
         }
       },
       selectedId,
@@ -248,10 +259,17 @@ export function StoreProvider({ api, children }: { api: Api; children: ReactNode
           setView(leave.to.view);
           setSelectedId(null);
           setSelection(new Set());
+          setSelectingState(false);
+          toTop();
         }
       },
 
       selection,
+      selecting,
+      setSelecting: (on) => {
+        setSelectingState(on);
+        if (!on) setSelection(new Set());
+      },
       toggleSelect: (id) =>
         setSelection((cur) => {
           const next = new Set(cur);
@@ -398,7 +416,7 @@ export function StoreProvider({ api, children }: { api: Api; children: ReactNode
         save(api.remove("saved_filters", id));
       },
     };
-  }, [api, data, view, selectedId, toast, reload, drafts, selection, pendingLeave]);
+  }, [api, data, view, selectedId, toast, reload, drafts, selection, selecting, pendingLeave]);
 
   if (error && !store) {
     return (

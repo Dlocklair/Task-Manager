@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { Columns3, LayoutList, Pencil } from "lucide-react";
+import { Columns3, LayoutList, Mail, Pencil } from "lucide-react";
 import { useStore } from "../lib/store";
 import { applyFilters, DEFAULT_CONFIG, groupTasks, NO_SEARCH, type TextSearch } from "../lib/listing";
 import type { GroupKey, ListConfig, Project, Task } from "../lib/types";
 import { sortCompare, STATUSES, step, tint } from "../lib/util";
 import { QuickAdd } from "./TaskList";
+import { mailtoLink } from "../lib/mail";
 import { ListTools } from "./ListTools";
 import { TaskSections } from "./TaskSections";
 import { AvatarStack, Check, DueBadge, Empty, PriorityFlag } from "./ui";
@@ -40,7 +41,25 @@ export function ProjectView({ project, onEdit }: { project: Project; onEdit(): v
       <header className="banner">
         <div className="banner-top">
           <h1>{project.name}</h1>
-          <button className="icon-btn on-color" onClick={onEdit} aria-label="Edit project"><Pencil size={17} /></button>
+          <div className="banner-actions">
+            {(() => {
+              const open = allTasks.filter((t) => t.status !== "done");
+              const people = new Map<string, { name: string; email: string | null }>();
+              open.forEach((t) => s.assigned(t.id).forEach((p) => people.set(p.id, { name: p.full_name, email: p.email })));
+              const to = [...people.values()].map((p) => p.email).filter((e): e is string => !!e);
+              if (to.length === 0) return <button className="icon-btn on-color" disabled aria-label="Email assignees" title="Assign people with an email address to email them"><Mail size={17} /></button>;
+              const lines = open.map((t) => {
+                const names = s.assigned(t.id).map((p) => p.full_name).join(", ");
+                return `- ${t.title}${t.due_date ? ` (due ${t.due_date})` : ""}${names ? ` — ${names}` : ""}`;
+              });
+              return (
+                <a className="icon-btn on-color" href={mailtoLink(to, `Open tasks: ${project.name}`, [`Open tasks in ${project.name}:`, "", ...lines])} aria-label="Email assignees" title="Email assignees">
+                  <Mail size={17} />
+                </a>
+              );
+            })()}
+            <button className="icon-btn on-color" onClick={onEdit} aria-label="Edit project"><Pencil size={17} /></button>
+          </div>
         </div>
         <div className="banner-stats">
           <div className="bar" role="img" aria-label={`${prog.pct}% complete`}><span style={{ width: `${prog.pct}%` }} /></div>
@@ -134,14 +153,16 @@ function Card({ task }: { task: Task }) {
       tabIndex={0}
     >
       <div className="card-top">
-        <input
-          type="checkbox"
-          className="pick-tick"
-          checked={picked}
-          aria-label={`Select ${task.title}`}
-          onClick={(e) => e.stopPropagation()}
-          onChange={() => s.toggleSelect(task.id)}
-        />
+        {s.selecting && (
+          <input
+            type="checkbox"
+            className="pick-tick"
+            checked={picked}
+            aria-label={`Select ${task.title}`}
+            onClick={(e) => e.stopPropagation()}
+            onChange={() => s.toggleSelect(task.id)}
+          />
+        )}
         <Check done={done} label={task.title} onToggle={() => s.updateTask(task.id, { status: done ? "todo" : "done" })} />
         <span className="row-title">{task.title}</span>
       </div>

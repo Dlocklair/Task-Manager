@@ -5,7 +5,8 @@ export const DEFAULT_CONFIG: ListConfig = {
   who: "all",
   priority: "all",
   project: "all",
-  hideDone: false,
+  // Finished tasks are hidden unless you ask for them.
+  hideDone: true,
   sortBy: "due",
   groupBy: "status",
 };
@@ -170,9 +171,9 @@ export function sameConfig(a: ListConfig, b: ListConfig): boolean {
   return KEYS.every((k) => a[k] === b[k]);
 }
 
-/** True when the config differs from the view's starting settings. */
+/** True when a real filter differs from the view's starting settings. Hide done alone does not count. */
 export function isChanged(cfg: ListConfig, base: ListConfig = DEFAULT_CONFIG): boolean {
-  return !sameConfig(cfg, base);
+  return !sameConfig({ ...cfg, hideDone: base.hideDone }, base);
 }
 
 /** A saved filter may come from an older version of the app, so fill in any missing settings. */
@@ -189,7 +190,6 @@ export function activeFilters(cfg: ListConfig, base: ListConfig, ctx: ListContex
   }
   if (cfg.priority !== base.priority) out.push(`Priority: ${PRIORITIES.find((p) => p.id === cfg.priority)?.label ?? cfg.priority}`);
   if (cfg.project !== base.project) out.push(`Project: ${ctx.projects.find((p) => p.id === cfg.project)?.name ?? "Unknown"}`);
-  if (cfg.hideDone !== base.hideDone && cfg.hideDone) out.push("Hiding done");
   if (cfg.groupBy !== base.groupBy) out.push(`Grouped by: ${GROUP_OPTIONS.find((g) => g.id === cfg.groupBy)?.label ?? cfg.groupBy}`);
   if (cfg.sortBy !== base.sortBy) out.push(`Sorted by: ${SORT_OPTIONS.find((o) => o.id === cfg.sortBy)?.label ?? cfg.sortBy}`);
   if (search.q.trim()) out.push(`Search: "${search.q.trim()}"${search.includeClosed ? " (including closed)" : ""}`);

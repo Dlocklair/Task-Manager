@@ -38,14 +38,16 @@ export function TaskRow({ task, depth = 0, showProject = false }: { task: Task; 
         ) : (
           <span className="caret-space" />
         )}
-        <input
-          type="checkbox"
-          className="pick-tick"
-          checked={picked}
-          aria-label={`Select ${task.title}`}
-          onClick={(e) => e.stopPropagation()}
-          onChange={() => s.toggleSelect(task.id)}
-        />
+        {s.selecting && (
+          <input
+            type="checkbox"
+            className="pick-tick"
+            checked={picked}
+            aria-label={`Select ${task.title}`}
+            onClick={(e) => e.stopPropagation()}
+            onChange={() => s.toggleSelect(task.id)}
+          />
+        )}
         <Check done={done} label={task.title} onToggle={() => s.updateTask(task.id, { status: done ? "todo" : "done" })} />
         <span className="row-title">{task.title}</span>
         <span className="row-meta">

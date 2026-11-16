@@ -101,7 +101,7 @@ export function ListTools({ scope, cfg, base, onChange, search, onSearch, groups
             {SORT_OPTIONS.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
           </select>
         </label>
-        <label className={"check-inline" + (cfg.hideDone ? " is-set" : "")}>
+        <label className="check-inline">
           <input type="checkbox" checked={cfg.hideDone} onChange={(e) => set("hideDone", e.target.checked)} />
           Hide done
         </label>

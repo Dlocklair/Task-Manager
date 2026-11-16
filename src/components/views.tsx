@@ -1,9 +1,10 @@
-import { useState, type FormEvent } from "react";
-import { Check as CheckIcon, Pencil, Plus, Trash2 } from "lucide-react";
+import { useEffect, useState, type FormEvent } from "react";
+import { Check as CheckIcon, Mail, Pencil, Plus, Trash2 } from "lucide-react";
 import { useStore } from "../lib/store";
 import type { Person, Task } from "../lib/types";
 import { addDays, byUrgency, COLORS, firstName, greeting, isoDay, tint } from "../lib/util";
 import { NO_SEARCH, searchTasks, type TextSearch } from "../lib/listing";
+import { mailtoLink } from "../lib/mail";
 import { TaskRow } from "./TaskList";
 import { SearchBox } from "./SearchBox";
 import { PeoplePicks } from "./PeoplePicks";
@@ -166,7 +167,11 @@ export function People() {
   const theirs = person ? s.tasksFor(person.id).filter((t) => t.status !== "done").sort(byUrgency) : [];
   // Only people other than you can be deleted here; your own entry stays.
   const deletable = s.data.people.filter((p) => p.user_id !== s.data.userId);
-  const chosen = deletable.filter((p) => selected.has(p.id));
+  const chosen = s.selecting ? deletable.filter((p) => selected.has(p.id)) : [];
+  // Leaving select mode clears any people that were ticked.
+  useEffect(() => {
+    if (!s.selecting) setSelected(new Set());
+  }, [s.selecting]);
 
   const toggleSelected = (id: string) =>
     setSelected((cur) => {
@@ -224,7 +229,10 @@ export function People() {
           const isMe = p.user_id === s.data.userId;
           return (
             <div key={p.id} className="person-wrap">
-              {!isMe && (
+              <button className="person-edit" aria-label={`Edit ${p.full_name}`} title="Edit details" onClick={() => setEditing(p)}>
+                <Pencil size={14} />
+              </button>
+              {!isMe && s.selecting && (
                 <label className="person-select" title={`Select ${p.full_name}`}>
                   <input type="checkbox" className="pick-box-input" checked={selected.has(p.id)} onChange={() => toggleSelected(p.id)} />
                   <span className={"pick-box" + (selected.has(p.id) ? " on" : "")} aria-hidden="true">
@@ -248,6 +256,16 @@ export function People() {
           <div className="group-bar">
             <h2 className="group-head"><i />Open tasks for {firstName(person.full_name)}<span>{theirs.length}</span></h2>
             <div className="group-actions">
+              {person.email ? (
+                <a className="btn quiet" href={mailtoLink([person.email], "Your open tasks", [
+                  `Hi ${firstName(person.full_name)},`,
+                  "",
+                  theirs.length ? "Here are your open tasks:" : "You have no open tasks right now.",
+                  ...theirs.map((t) => `- ${t.title}${t.due_date ? ` (due ${t.due_date})` : ""}`),
+                ])}><Mail size={15} />Email tasks</a>
+              ) : (
+                <button className="btn quiet" disabled title="Add an email address to send tasks"><Mail size={15} />Email tasks</button>
+              )}
               <button className="btn quiet" onClick={() => setEditing(person)}><Pencil size={15} />Edit</button>
               {person.user_id !== s.data.userId && (
                 <button
