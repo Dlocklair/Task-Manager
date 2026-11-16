@@ -556,3 +556,11 @@ input[type="checkbox"] { width: 17px; height: 17px; accent-color: var(--primary)
 .tweaks-sample { border: 1px solid var(--line); border-radius: var(--r); padding: 12px 14px; background: var(--canvas); }
 .tweaks-sample strong { display: block; font: 700 16px var(--display); }
 @media (max-width: 760px) { .tweaks-toggle { display: none; } }
+
+/* Edit-boxes inspector */
+.tweaks-look, .tweaks-look-box { display: flex; flex-direction: column; gap: 12px; }
+.tweaks-look { padding-bottom: 14px; border-bottom: 1px solid var(--line); }
+.tweaks-hint { font-size: 13px; color: var(--ink-3); margin: 0; }
+.tweaks-group input[type=number] { width: 100%; padding: 7px 9px; font-size: 14px; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--surface); }
+.tweaks-css { width: 100%; min-height: 110px; font: 12px ui-monospace, Menlo, Consolas, monospace; padding: 8px; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--canvas); color: var(--ink); }
+.tweaks-row { display: flex; gap: 8px; flex-wrap: wrap; }

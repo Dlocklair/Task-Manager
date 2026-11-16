@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { SlidersHorizontal, X } from "lucide-react";
+import { applyLook, LookSection } from "./LookEditor";
 
 /** Layout and type settings. Saved in this browser and applied to every screen. */
 export interface Tweaks {
@@ -98,7 +99,10 @@ function save(t: Tweaks) {
 
 /** Applied as soon as the app loads, so the saved look is there from the first paint. */
 export function applySavedTweaks() {
-  if (tweaksEnabled()) applyTweaks(loadTweaks());
+  if (tweaksEnabled()) {
+    applyTweaks(loadTweaks());
+    applyLook();
+  }
 }
 
 function Seg<T extends string>({ label, value, options, onChange }: { label: string; value: T; options: { id: T; label: string }[]; onChange(v: T): void }) {
@@ -141,6 +145,8 @@ export function TweaksPanel() {
         <h2>Tweaks</h2>
         <button className="icon-btn" onClick={() => setOpen(false)} aria-label="Close tweaks"><X size={18} /></button>
       </div>
+
+      <LookSection />
 
       <div className="tweaks-sample" style={{ fontFamily: BODY[t.bodyFont], lineHeight: t.lineHeight }}>
         <strong style={{ fontFamily: DISPLAY[t.displayFont] }}>Sample task heading</strong>
