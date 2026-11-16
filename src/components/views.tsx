@@ -1,9 +1,11 @@
 import { useState, type FormEvent } from "react";
-import { Check as CheckIcon, Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { Check as CheckIcon, Pencil, Plus, Trash2 } from "lucide-react";
 import { useStore } from "../lib/store";
 import type { Person, Task } from "../lib/types";
 import { addDays, byUrgency, COLORS, firstName, greeting, isoDay, tint } from "../lib/util";
+import { NO_SEARCH, searchTasks, type TextSearch } from "../lib/listing";
 import { TaskRow } from "./TaskList";
+import { SearchBox } from "./SearchBox";
 import { PeoplePicks } from "./PeoplePicks";
 import { Avatar, Empty, Modal, Swatches } from "./ui";
 
@@ -31,10 +33,10 @@ function Section({ title, tone, tasks }: { title: string; tone?: string; tasks: 
 
 export function Home({ onNewProject }: { onNewProject(): void }) {
   const s = useStore();
-  const [query, setQuery] = useState("");
+  const [search, setSearch] = useState<TextSearch>(NO_SEARCH);
   const b = buckets(s.data.tasks);
-  const q = query.trim().toLowerCase();
-  const found = q ? s.data.tasks.filter((t) => t.title.toLowerCase().includes(q) || (t.description ?? "").toLowerCase().includes(q)).sort(byUrgency) : [];
+  const q = search.q.trim();
+  const found = q ? searchTasks(s.data.tasks, search).sort(byUrgency) : [];
   const name = s.me ? firstName(s.me.full_name) : "";
 
   return (
@@ -44,14 +46,24 @@ export function Home({ onNewProject }: { onNewProject(): void }) {
           <p className="date-line">{new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}</p>
           <h1>{greeting()}{name && `, ${name}`}</h1>
         </div>
-        <label className="search">
-          <Search size={16} />
-          <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search all tasks" aria-label="Search all tasks" />
-        </label>
+        <SearchBox
+          value={search.q}
+          onChange={(v) => setSearch({ ...search, q: v })}
+          includeClosed={search.includeClosed}
+          onIncludeClosed={(v) => setSearch({ ...search, includeClosed: v })}
+          placeholder="Search all tasks"
+        />
       </header>
 
       {q ? (
-        found.length ? <div className="rows">{found.map((t) => <TaskRow key={t.id} task={t} showProject />)}</div> : <Empty title={`Nothing matches "${query.trim()}"`}>Try a shorter word, or check the spelling.</Empty>
+        found.length ? (
+          <>
+            <p className="search-count">{found.length} {found.length === 1 ? "match" : "matches"}{search.includeClosed ? ", closed tasks included" : ", open tasks only"}</p>
+            <div className="rows">{found.map((t) => <TaskRow key={t.id} task={t} showProject />)}</div>
+          </>
+        ) : (
+          <Empty title={`Nothing matches "${q}"`}>{search.includeClosed ? "Try a shorter word, or check the spelling." : "Tick Include closed to search finished tasks too."}</Empty>
+        )
       ) : s.data.projects.length === 0 ? (
         <Empty title="Start with a project">
           Projects hold your tasks. Create one for anything you are working on.

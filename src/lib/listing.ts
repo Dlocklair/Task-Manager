@@ -10,6 +10,9 @@ export const DEFAULT_CONFIG: ListConfig = {
   groupBy: "status",
 };
 
+/** All tasks opens grouped by project. */
+export const ALL_BASE: ListConfig = { ...DEFAULT_CONFIG, groupBy: "project" };
+
 export const SORT_OPTIONS: { id: SortKey; label: string }[] = [
   { id: "due", label: "Due date" },
   { id: "priority", label: "Priority" },
@@ -45,10 +48,38 @@ export interface ListContext {
   assigned(taskId: string): Person[];
 }
 
-/** Keeps the tasks that match the filters in the config. */
-export function applyFilters(tasks: Task[], cfg: ListConfig, ctx: ListContext): Task[] {
+/** Text search. Closed tasks are only searched when includeClosed is on. */
+export interface TextSearch {
+  q: string;
+  includeClosed: boolean;
+}
+
+export const NO_SEARCH: TextSearch = { q: "", includeClosed: false };
+
+export function matchesText(t: Task, q: string): boolean {
+  const needle = q.trim().toLowerCase();
+  if (!needle) return true;
+  return t.title.toLowerCase().includes(needle) || (t.description ?? "").toLowerCase().includes(needle);
+}
+
+/** Search results for a text query. Used by Home and by the list filters. */
+export function searchTasks(tasks: Task[], search: TextSearch): Task[] {
   return tasks.filter((t) => {
-    if (cfg.hideDone && t.status === "done") return false;
+    if (t.status === "done" && !search.includeClosed) return false;
+    return matchesText(t, search.q);
+  });
+}
+
+/** Keeps the tasks that match the search and the filters in the config. */
+export function applyFilters(tasks: Task[], cfg: ListConfig, ctx: ListContext, search: TextSearch = NO_SEARCH): Task[] {
+  const searching = search.q.trim().length > 0;
+  return tasks.filter((t) => {
+    if (searching) {
+      if (t.status === "done" && !search.includeClosed) return false;
+      if (!matchesText(t, search.q)) return false;
+    } else if (cfg.hideDone && t.status === "done") {
+      return false;
+    }
     if (cfg.priority !== "all" && t.priority !== cfg.priority) return false;
     if (cfg.project !== "all" && t.project_id !== cfg.project) return false;
     if (cfg.who === "all") return true;
@@ -139,12 +170,28 @@ export function sameConfig(a: ListConfig, b: ListConfig): boolean {
   return KEYS.every((k) => a[k] === b[k]);
 }
 
-/** True when the config differs from the defaults, so a Reset button makes sense. */
-export function isChanged(cfg: ListConfig): boolean {
-  return !sameConfig(cfg, DEFAULT_CONFIG);
+/** True when the config differs from the view's starting settings. */
+export function isChanged(cfg: ListConfig, base: ListConfig = DEFAULT_CONFIG): boolean {
+  return !sameConfig(cfg, base);
 }
 
 /** A saved filter may come from an older version of the app, so fill in any missing settings. */
-export function normalise(cfg: Partial<ListConfig>): ListConfig {
-  return { ...DEFAULT_CONFIG, ...cfg };
+export function normalise(cfg: Partial<ListConfig>, base: ListConfig = DEFAULT_CONFIG): ListConfig {
+  return { ...base, ...cfg };
+}
+
+/** Plain-language labels for every setting that differs from the view's starting settings. */
+export function activeFilters(cfg: ListConfig, base: ListConfig, ctx: ListContext, search: TextSearch): string[] {
+  const out: string[] = [];
+  if (cfg.who !== base.who) {
+    const name = cfg.who === "all" ? "Everyone" : cfg.who === "none" ? "Nobody yet" : (ctx.people.find((p) => p.id === cfg.who)?.full_name ?? "Someone");
+    out.push(`Assigned to: ${name}`);
+  }
+  if (cfg.priority !== base.priority) out.push(`Priority: ${PRIORITIES.find((p) => p.id === cfg.priority)?.label ?? cfg.priority}`);
+  if (cfg.project !== base.project) out.push(`Project: ${ctx.projects.find((p) => p.id === cfg.project)?.name ?? "Unknown"}`);
+  if (cfg.hideDone !== base.hideDone && cfg.hideDone) out.push("Hiding done");
+  if (cfg.groupBy !== base.groupBy) out.push(`Grouped by: ${GROUP_OPTIONS.find((g) => g.id === cfg.groupBy)?.label ?? cfg.groupBy}`);
+  if (cfg.sortBy !== base.sortBy) out.push(`Sorted by: ${SORT_OPTIONS.find((o) => o.id === cfg.sortBy)?.label ?? cfg.sortBy}`);
+  if (search.q.trim()) out.push(`Search: "${search.q.trim()}"${search.includeClosed ? " (including closed)" : ""}`);
+  return out;
 }

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useStore } from "../lib/store";
-import { applyFilters, DEFAULT_CONFIG, groupTasks } from "../lib/listing";
+import { ALL_BASE, applyFilters, groupTasks, NO_SEARCH, type TextSearch } from "../lib/listing";
 import type { GroupKey, ListConfig } from "../lib/types";
 import { ListTools } from "./ListTools";
 import { TaskSections } from "./TaskSections";
@@ -11,10 +11,11 @@ const ALL_GROUPS: GroupKey[] = ["status", "assigned", "priority", "due", "projec
 /** Every open or finished task across all projects. Subtasks sit under their parent. */
 export function AllTasks() {
   const s = useStore();
-  const [cfg, setCfg] = useState<ListConfig>({ ...DEFAULT_CONFIG, groupBy: "project" });
+  const [cfg, setCfg] = useState<ListConfig>(ALL_BASE);
+  const [search, setSearch] = useState<TextSearch>(NO_SEARCH);
   const roots = s.data.tasks.filter((t) => !t.parent_task_id);
   const ctx = { people: s.data.people, projects: s.data.projects, assigned: (id: string) => s.assigned(id) };
-  const tasks = applyFilters(roots, cfg, ctx);
+  const tasks = applyFilters(roots, cfg, ctx, search);
   const sections = groupTasks(tasks, cfg, ctx);
   const open = roots.filter((t) => t.status !== "done").length;
 
@@ -28,15 +29,15 @@ export function AllTasks() {
       </header>
 
       {roots.length > 0 && (
-        <ListTools scope="all" cfg={cfg} onChange={setCfg} groups={ALL_GROUPS} showProject shown={tasks.length} total={roots.length} />
+        <ListTools scope="all" cfg={cfg} base={ALL_BASE} onChange={setCfg} search={search} onSearch={setSearch} groups={ALL_GROUPS} showProject shown={tasks.length} total={roots.length} />
       )}
 
       {roots.length === 0 ? (
         <Empty title="No tasks yet">Add a task with the New task button. It will appear here.</Empty>
       ) : tasks.length === 0 ? (
-        <Empty title="No tasks match this filter">Reset the filters above to see all of them.</Empty>
+        <Empty title="No tasks match">Clear the search or filters above to see more.</Empty>
       ) : (
-        <TaskSections sections={sections} groupBy={cfg.groupBy} showProject={cfg.groupBy !== "project"} />
+        <TaskSections sections={sections} groupBy={cfg.groupBy} showProject={cfg.groupBy !== "project"} openDone={search.includeClosed && search.q.trim().length > 0} />
       )}
     </div>
   );

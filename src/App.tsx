@@ -49,6 +49,11 @@ function Workspace({ onSignOut }: { onSignOut?: () => void }) {
     <div className={"app" + (selected ? " has-detail" : "")}>
       <Sidebar onNewProject={newProject} onSignOut={onSignOut} />
       <main className="main">
+        {!selected && (
+          <div className="main-top">
+            <button className="new-task" onClick={() => setNewTask(true)}><Plus size={18} />New task</button>
+          </div>
+        )}
         {s.view.kind === "home" && <Home onNewProject={newProject} />}
         {s.view.kind === "projects" && <Projects onNewProject={newProject} />}
         {s.view.kind === "all" && <AllTasks />}
@@ -62,7 +67,6 @@ function Workspace({ onSignOut }: { onSignOut?: () => void }) {
           <TaskDetail task={selected} />
         </>
       )}
-      <button className="new-task" onClick={() => setNewTask(true)}><Plus size={18} />New task</button>
       <MobileNav onNewTask={() => setNewTask(true)} />
       {projectDialog && <ProjectDialog project={projectDialog.project} onClose={() => setProjectDialog(null)} />}
       {newTask && <NewTaskDialog onClose={() => setNewTask(false)} />}

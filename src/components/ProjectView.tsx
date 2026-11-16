@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Columns3, LayoutList, Pencil } from "lucide-react";
 import { useStore } from "../lib/store";
-import { applyFilters, DEFAULT_CONFIG, groupTasks } from "../lib/listing";
+import { applyFilters, DEFAULT_CONFIG, groupTasks, NO_SEARCH, type TextSearch } from "../lib/listing";
 import type { GroupKey, ListConfig, Project, Task } from "../lib/types";
 import { sortCompare, STATUSES, step, tint } from "../lib/util";
 import { QuickAdd } from "./TaskList";
@@ -18,10 +18,11 @@ export function ProjectView({ project, onEdit }: { project: Project; onEdit(): v
   const s = useStore();
   const [mode, setMode] = useState<"list" | "board">("list");
   const [cfg, setCfg] = useState<ListConfig>(DEFAULT_CONFIG);
+  const [search, setSearch] = useState<TextSearch>(NO_SEARCH);
   const allTasks = s.topLevel(project.id);
   const ctx = { people: s.data.people, projects: s.data.projects, assigned: (id: string) => s.assigned(id) };
   // Filtering is by the task's own assignees. Subtasks are not filtered separately.
-  const tasks = applyFilters(allTasks, cfg, ctx);
+  const tasks = applyFilters(allTasks, cfg, ctx, search);
   const prog = s.progress(project.id);
 
   const board: Record<Step, Task[]> = { in_progress: [], todo: [], done: [] };
@@ -60,7 +61,10 @@ export function ProjectView({ project, onEdit }: { project: Project; onEdit(): v
         <ListTools
           scope={project.id}
           cfg={cfg}
+          base={DEFAULT_CONFIG}
           onChange={setCfg}
+          search={search}
+          onSearch={setSearch}
           groups={mode === "list" ? PROJECT_GROUPS : []}
           showProject={false}
           shown={tasks.length}
@@ -71,9 +75,9 @@ export function ProjectView({ project, onEdit }: { project: Project; onEdit(): v
       {allTasks.length === 0 ? (
         <Empty title="This project has no tasks yet">Type the first one in the box above and press Enter.</Empty>
       ) : tasks.length === 0 ? (
-        <Empty title="No tasks match this filter">Reset the filters above to see all of them.</Empty>
+        <Empty title="No tasks match">Clear the search or filters above to see more.</Empty>
       ) : mode === "list" ? (
-        <TaskSections sections={sections} groupBy={cfg.groupBy} />
+        <TaskSections sections={sections} groupBy={cfg.groupBy} openDone={search.includeClosed && search.q.trim().length > 0} />
       ) : (
         <Board groups={board} projectId={project.id} />
       )}
