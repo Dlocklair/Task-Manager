@@ -28,7 +28,7 @@
 html, body, #root { height: 100%; }
 body {
   margin: 0;
-  font: 15px/1.45 var(--body);
+  font: 15px/var(--lh, 1.45) var(--body);
   color: var(--ink);
   background: var(--canvas);
   -webkit-font-smoothing: antialiased;
@@ -42,9 +42,9 @@ button { cursor: pointer; border: 0; background: none; padding: 0; text-align: l
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 
 /* ---------- Layout ---------- */
-.app { display: grid; grid-template-columns: 264px minmax(0, 1fr); height: 100dvh; }
+.app { display: grid; grid-template-columns: 264px minmax(0, 1fr); height: calc(100dvh / var(--ts, 1)); zoom: var(--ts, 1); }
 .main { overflow-y: auto; }
-.page { max-width: 1080px; margin: 0 auto; padding: 36px 40px 120px; }
+.page { max-width: var(--page-w, 1080px); margin: 0 auto; padding: 36px 40px 120px; }
 .page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; flex-wrap: wrap; margin-bottom: 28px; }
 .date-line { color: var(--ink-2); margin-bottom: 4px; }
 .page-head h1 + .date-line { margin: 6px 0 0; }
@@ -127,7 +127,7 @@ input[type="checkbox"] { width: 17px; height: 17px; accent-color: var(--primary)
 .group-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 
 .rows { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
-.row { display: flex; align-items: center; gap: 10px; padding: 11px 14px 11px 10px; border-top: 1px solid var(--line); cursor: pointer; min-height: 48px; }
+.row { display: flex; align-items: center; gap: 10px; padding: var(--row-y, 11px) 14px var(--row-y, 11px) 10px; border-top: 1px solid var(--line); cursor: pointer; min-height: 48px; }
 .rows > .row:first-child { border-top: 0; }
 .row:hover { background: #f8f9fd; }
 .row.is-selected { background: var(--primary-soft); }
@@ -305,7 +305,7 @@ input[type="checkbox"] { width: 17px; height: 17px; accent-color: var(--primary)
 /* ---------- Floating and mobile controls ---------- */
 .new-task { display: inline-flex; align-items: center; gap: 8px; background: var(--primary); color: #fff; font-weight: 700; padding: 13px 20px; border-radius: 99px; box-shadow: 0 10px 24px rgb(49 87 224 / 0.38); }
 .new-task:hover { background: var(--primary-dark); }
-.main-top { max-width: 1080px; margin: 0 auto; padding: 24px 40px 0; display: flex; justify-content: flex-end; }
+.main-top { max-width: var(--page-w, 1080px); margin: 0 auto; padding: 24px 40px 0; display: flex; justify-content: var(--cta-justify, flex-end); }
 .has-detail .main-top { display: none; }
 .tabs { display: none; }
 
@@ -536,3 +536,23 @@ input[type="checkbox"] { width: 17px; height: 17px; accent-color: var(--primary)
 /* Sign-in: device-only option */
 .device-option { display: flex; flex-direction: column; gap: 8px; border-top: 1px solid var(--line); padding-top: 14px; margin-top: 4px; }
 .device-option .field-hint { margin: 0; }
+
+/* Tweaks panel */
+.tweaks-toggle { position: fixed; right: 20px; bottom: 20px; z-index: 30; display: inline-flex; align-items: center; gap: 7px; padding: 10px 16px; border-radius: 99px; background: var(--navy); color: #fff; font: 700 14px var(--display); box-shadow: 0 8px 20px rgb(22 28 46 / 0.3); }
+.has-detail .tweaks-toggle { display: none; }
+.tweaks-panel { position: fixed; top: 0; right: 0; bottom: 0; width: 320px; max-width: 92vw; z-index: 60; background: var(--surface); border-left: 1px solid var(--line); box-shadow: -12px 0 30px rgb(22 28 46 / 0.12); padding: 22px 22px 40px; overflow-y: auto; display: flex; flex-direction: column; gap: 18px; }
+.tweaks-head { display: flex; align-items: center; justify-content: space-between; }
+.tweaks-head h2 { font: 700 18px var(--display); }
+.tweaks-group { display: flex; flex-direction: column; gap: 8px; }
+.tweaks-group > span { font-size: 13px; font-weight: 600; color: var(--ink-2); }
+.tweaks-group select, .tweaks-group input[type=range] { width: 100%; }
+.tweaks-group select { font-size: 14px; padding: 8px 10px; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--surface); }
+.tweaks-seg { display: flex; flex-wrap: wrap; gap: 4px; background: #e6eaf3; border-radius: var(--r-sm); padding: 3px; }
+.tweaks-seg button { flex: 1 1 auto; padding: 6px 8px; border-radius: 6px; font-size: 13px; font-weight: 600; color: var(--ink-2); }
+.tweaks-seg button.on { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgb(22 28 46 / 0.12); }
+.tweaks-swatches { display: flex; gap: 10px; }
+.tweaks-swatches button { width: 30px; height: 30px; border-radius: 99px; border: 3px solid var(--surface); box-shadow: 0 0 0 1px var(--line); }
+.tweaks-swatches button.on { box-shadow: 0 0 0 2px var(--ink); }
+.tweaks-sample { border: 1px solid var(--line); border-radius: var(--r); padding: 12px 14px; background: var(--canvas); }
+.tweaks-sample strong { display: block; font: 700 16px var(--display); }
+@media (max-width: 760px) { .tweaks-toggle { display: none; } }

@@ -12,9 +12,12 @@ import { MobileNav, NewTaskDialog, ProjectDialog, Sidebar } from "./components/S
 import { LeaveDialog } from "./components/LeaveDialog";
 import { BulkBar } from "./components/BulkBar";
 import { Reminders } from "./components/Reminders";
+import { applySavedTweaks, TweaksPanel, tweaksEnabled } from "./components/Tweaks";
 import { TaskDetail } from "./components/TaskDetail";
 import { Home, MyTasks, People, Projects } from "./components/views";
 import { AllTasks } from "./components/AllTasks";
+
+applySavedTweaks();
 
 const demo = !sb || new URLSearchParams(window.location.search).has("demo");
 const DEVICE_KEY = "task-manager-device-mode";
@@ -91,6 +94,7 @@ function Workspace({ onSignOut }: { onSignOut?: () => void }) {
       {newTask && <NewTaskDialog onClose={() => setNewTask(false)} />}
       <BulkBar />
       <Reminders />
+      {tweaksEnabled() && <TweaksPanel />}
       <LeaveDialog />
     </div>
   );
