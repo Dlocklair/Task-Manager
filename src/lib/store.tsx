@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import type { Api, Data, Note, Person, Priority, Project, Status, Task, View } from "./types";
+import type { Api, Data, ListConfig, Note, Person, Priority, Project, Status, Task, View } from "./types";
 import { COLORS, isoDay, uid } from "./util";
 
 interface NewTask {
@@ -63,6 +63,9 @@ export interface Store {
   addPerson(name: string, email: string | null, color?: string): void;
   updatePerson(id: string, patch: Partial<Pick<Person, "full_name" | "email" | "color">>): void;
   deletePerson(id: string): void;
+
+  addSavedFilter(name: string, scope: string, config: ListConfig): void;
+  deleteSavedFilter(id: string): void;
 }
 
 const Ctx = createContext<Store | null>(null);
@@ -383,6 +386,16 @@ export function StoreProvider({ api, children }: { api: Api; children: ReactNode
       deletePerson: (id) => {
         mut((d) => ({ ...d, people: d.people.filter((p) => p.id !== id), assignees: d.assignees.filter((a) => a.person_id !== id) }));
         save(api.remove("people", id));
+      },
+
+      addSavedFilter: (name, scope, config) => {
+        const row = { id: uid(), workspace_id: data.workspace.id, name: name.trim(), scope, config };
+        mut((d) => ({ ...d, savedFilters: [...d.savedFilters, { ...row, owner_id: d.userId, created_at: new Date().toISOString() }] }));
+        save(api.insert("saved_filters", row));
+      },
+      deleteSavedFilter: (id) => {
+        mut((d) => ({ ...d, savedFilters: d.savedFilters.filter((f) => f.id !== id) }));
+        save(api.remove("saved_filters", id));
       },
     };
   }, [api, data, view, selectedId, toast, reload, drafts, selection, pendingLeave]);

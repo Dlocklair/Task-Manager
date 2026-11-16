@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { CircleCheck, FolderKanban, House, LogOut, Plus, Users } from "lucide-react";
+import { CircleCheck, FolderKanban, House, LayoutList, LogOut, Plus, Users } from "lucide-react";
 import { useStore } from "../lib/store";
 import type { Priority, Project, View } from "../lib/types";
 import { COLORS, PRIORITIES, tint } from "../lib/util";
@@ -8,6 +8,7 @@ import { PeoplePicks } from "./PeoplePicks";
 
 const NAV: { view: View; label: string; icon: typeof House }[] = [
   { view: { kind: "home" }, label: "Home", icon: House },
+  { view: { kind: "all" }, label: "All tasks", icon: LayoutList },
   { view: { kind: "my" }, label: "My tasks", icon: CircleCheck },
   { view: { kind: "people" }, label: "People", icon: Users },
 ];
@@ -57,7 +58,7 @@ export function Sidebar({ onNewProject, onSignOut }: { onNewProject(): void; onS
 
 export function MobileNav({ onNewTask }: { onNewTask(): void }) {
   const s = useStore();
-  const items: { view: View; label: string; icon: typeof House }[] = [NAV[0], { view: { kind: "projects" }, label: "Projects", icon: FolderKanban }, NAV[1], NAV[2]];
+  const items: { view: View; label: string; icon: typeof House }[] = [NAV[0], { view: { kind: "projects" }, label: "Projects", icon: FolderKanban }, NAV[1], NAV[2], NAV[3]];
   const active = s.view.kind === "project" ? "projects" : s.view.kind;
   return (
     <nav className="tabs" aria-label="Main">

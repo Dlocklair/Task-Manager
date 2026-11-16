@@ -55,6 +55,33 @@ export interface Note {
   created_at: string;
 }
 
+/** How a task list is filtered, sorted and grouped. Saved filters store one of these. */
+export type SortKey = "due" | "priority" | "name";
+export type GroupKey = "status" | "assigned" | "priority" | "due" | "project" | "none";
+
+export type ListConfig = {
+  /** "all", "none" (nobody assigned yet) or a person id */
+  who: string;
+  /** "all" or a priority */
+  priority: string;
+  /** "all" or a project id. Used on All tasks only. */
+  project: string;
+  hideDone: boolean;
+  sortBy: SortKey;
+  groupBy: GroupKey;
+};
+
+export interface SavedFilter {
+  id: string;
+  workspace_id: string;
+  owner_id: string;
+  name: string;
+  /** "all" for All tasks, or a project id */
+  scope: string;
+  config: ListConfig;
+  created_at: string;
+}
+
 export interface Data {
   userId: string;
   email: string;
@@ -63,9 +90,10 @@ export interface Data {
   tasks: Task[];
   people: Person[];
   assignees: Assignee[];
+  savedFilters: SavedFilter[];
 }
 
-export type Table = "workspaces" | "projects" | "tasks" | "people" | "task_comments";
+export type Table = "workspaces" | "projects" | "tasks" | "people" | "task_comments" | "saved_filters";
 
 /** Everything the app needs from a backend. Supabase and the demo both implement it. */
 export interface Api {
@@ -83,5 +111,6 @@ export type View =
   | { kind: "home" }
   | { kind: "projects" }
   | { kind: "project"; id: string }
+  | { kind: "all" }
   | { kind: "my" }
   | { kind: "people" };

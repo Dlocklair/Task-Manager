@@ -13,6 +13,7 @@ import { BulkBar } from "./components/BulkBar";
 import { Reminders } from "./components/Reminders";
 import { TaskDetail } from "./components/TaskDetail";
 import { Home, MyTasks, People, Projects } from "./components/views";
+import { AllTasks } from "./components/AllTasks";
 
 const demo = !sb || new URLSearchParams(window.location.search).has("demo");
 
@@ -50,6 +51,7 @@ function Workspace({ onSignOut }: { onSignOut?: () => void }) {
       <main className="main">
         {s.view.kind === "home" && <Home onNewProject={newProject} />}
         {s.view.kind === "projects" && <Projects onNewProject={newProject} />}
+        {s.view.kind === "all" && <AllTasks />}
         {s.view.kind === "my" && <MyTasks />}
         {s.view.kind === "people" && <People />}
         {s.view.kind === "project" && (project ? <ProjectView key={project.id} project={project} onEdit={() => setProjectDialog({ project })} /> : <Home onNewProject={newProject} />)}

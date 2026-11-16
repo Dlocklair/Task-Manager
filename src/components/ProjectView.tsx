@@ -1,42 +1,38 @@
 import { useState } from "react";
-import { ChevronDown, Columns3, LayoutList, Pencil } from "lucide-react";
+import { Columns3, LayoutList, Pencil } from "lucide-react";
 import { useStore } from "../lib/store";
-import type { Project, Task } from "../lib/types";
+import { applyFilters, DEFAULT_CONFIG, groupTasks } from "../lib/listing";
+import type { GroupKey, ListConfig, Project, Task } from "../lib/types";
 import { sortCompare, STATUSES, step, tint } from "../lib/util";
-import { QuickAdd, TaskRow } from "./TaskList";
+import { QuickAdd } from "./TaskList";
+import { ListTools } from "./ListTools";
+import { TaskSections } from "./TaskSections";
 import { AvatarStack, Check, DueBadge, Empty, PriorityFlag } from "./ui";
 
 type Step = "todo" | "in_progress" | "done";
-type SortKey = "due" | "priority" | "assigned" | "name";
 
-const SORTS: { id: SortKey; label: string }[] = [
-  { id: "due", label: "Due date" },
-  { id: "priority", label: "Priority" },
-  { id: "assigned", label: "Assigned to" },
-  { id: "name", label: "Name" },
-];
+/** Groupings that make sense inside one project. Board view is always by status. */
+const PROJECT_GROUPS: GroupKey[] = ["status", "assigned", "priority", "due", "none"];
 
 export function ProjectView({ project, onEdit }: { project: Project; onEdit(): void }) {
   const s = useStore();
   const [mode, setMode] = useState<"list" | "board">("list");
-  const [showDone, setShowDone] = useState(false);
-  const [who, setWho] = useState("all");
-  const [sortBy, setSortBy] = useState<SortKey>("due");
+  const [cfg, setCfg] = useState<ListConfig>(DEFAULT_CONFIG);
   const allTasks = s.topLevel(project.id);
+  const ctx = { people: s.data.people, projects: s.data.projects, assigned: (id: string) => s.assigned(id) };
   // Filtering is by the task's own assignees. Subtasks are not filtered separately.
-  const tasks = allTasks.filter((t) => {
-    if (who === "all") return true;
-    const people = s.assigned(t.id);
-    return who === "none" ? people.length === 0 : people.some((p) => p.id === who);
-  });
+  const tasks = applyFilters(allTasks, cfg, ctx);
   const prog = s.progress(project.id);
-  const groups: Record<Step, Task[]> = { in_progress: [], todo: [], done: [] };
-  for (const t of tasks) groups[step(t.status)].push(t);
-  const cmp = sortCompare(sortBy, (id) => s.assigned(id)[0]?.full_name ?? "");
-  groups.todo.sort(cmp);
-  groups.in_progress.sort(cmp);
-  if (sortBy === "due") groups.done.sort((a, b) => (b.completed_at ?? "").localeCompare(a.completed_at ?? ""));
-  else groups.done.sort(cmp);
+
+  const board: Record<Step, Task[]> = { in_progress: [], todo: [], done: [] };
+  for (const t of tasks) board[step(t.status)].push(t);
+  const cmp = sortCompare(cfg.sortBy, (id) => s.assigned(id)[0]?.full_name ?? "");
+  board.todo.sort(cmp);
+  board.in_progress.sort(cmp);
+  if (cfg.sortBy === "due") board.done.sort((a, b) => (b.completed_at ?? "").localeCompare(a.completed_at ?? ""));
+  else board.done.sort(cmp);
+
+  const sections = mode === "list" ? groupTasks(tasks, cfg, ctx) : [];
 
   return (
     <div className="page" style={tint(project.color)}>
@@ -61,55 +57,25 @@ export function ProjectView({ project, onEdit }: { project: Project; onEdit(): v
       </div>
 
       {allTasks.length > 0 && (
-        <div className="view-tools" role="group" aria-label="Filter and sort tasks">
-          <label>
-            <span>Assigned to</span>
-            <select value={who} onChange={(e) => setWho(e.target.value)}>
-              <option value="all">Everyone</option>
-              <option value="none">Nobody yet</option>
-              {[...s.data.people].sort((a, b) => a.full_name.localeCompare(b.full_name)).map((p) => (
-                <option key={p.id} value={p.id}>{p.full_name}</option>
-              ))}
-            </select>
-          </label>
-          <label>
-            <span>Sort by</span>
-            <select value={sortBy} onChange={(e) => setSortBy(e.target.value as SortKey)}>
-              {SORTS.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
-            </select>
-          </label>
-          {(who !== "all" || sortBy !== "due") && (
-            <button className="btn small" onClick={() => { setWho("all"); setSortBy("due"); }}>Reset</button>
-          )}
-          <span className="view-count">Showing {tasks.length} of {allTasks.length}</span>
-        </div>
+        <ListTools
+          scope={project.id}
+          cfg={cfg}
+          onChange={setCfg}
+          groups={mode === "list" ? PROJECT_GROUPS : []}
+          showProject={false}
+          shown={tasks.length}
+          total={allTasks.length}
+        />
       )}
 
       {allTasks.length === 0 ? (
         <Empty title="This project has no tasks yet">Type the first one in the box above and press Enter.</Empty>
       ) : tasks.length === 0 ? (
-        <Empty title="No tasks match this filter">Choose Everyone above to see all of them.</Empty>
+        <Empty title="No tasks match this filter">Reset the filters above to see all of them.</Empty>
       ) : mode === "list" ? (
-        <>
-          {(["in_progress", "todo"] as Step[]).map((g) =>
-            groups[g].length ? (
-              <section key={g} className="group">
-                <h2 className={`group-head ${g}`}><i />{STATUSES.find((x) => x.id === g)!.label}<span>{groups[g].length}</span></h2>
-                <div className="rows">{groups[g].map((t) => <TaskRow key={t.id} task={t} />)}</div>
-              </section>
-            ) : null,
-          )}
-          {groups.done.length > 0 && (
-            <section className="group">
-              <button className="group-head done as-button" aria-expanded={showDone} onClick={() => setShowDone(!showDone)}>
-                <i />Done<span>{groups.done.length}</span><ChevronDown size={16} className={showDone ? "flip" : ""} />
-              </button>
-              {showDone && <div className="rows">{groups.done.map((t) => <TaskRow key={t.id} task={t} />)}</div>}
-            </section>
-          )}
-        </>
+        <TaskSections sections={sections} groupBy={cfg.groupBy} />
       ) : (
-        <Board groups={groups} projectId={project.id} />
+        <Board groups={board} projectId={project.id} />
       )}
     </div>
   );

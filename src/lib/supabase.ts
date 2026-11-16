@@ -26,12 +26,13 @@ export const supabaseApi: Api = {
     if (!members.length) throw new Error("No workspace was found for this account.");
     const wsId = members[0].workspace_id;
 
-    const [ws, projects, tasks, people, assignees] = await Promise.all([
+    const [ws, projects, tasks, people, assignees, filters] = await Promise.all([
       client.from("workspaces").select("id,name,default_assignee_ids").eq("id", wsId).single(),
       client.from("projects").select("id,workspace_id,name,description,color,position,default_priority,default_assignee_ids,created_at").eq("workspace_id", wsId).neq("status", "archived").order("position"),
       client.from("tasks").select("id,workspace_id,project_id,parent_task_id,title,description,status,priority,due_date,due_time,remind_before_minutes,position,completed_at,created_at").eq("workspace_id", wsId).order("position").limit(5000),
       client.from("people").select("id,workspace_id,user_id,full_name,email,color").eq("workspace_id", wsId).eq("is_archived", false).order("created_at"),
       client.from("task_assignees").select("task_id,person_id").limit(10000),
+      client.from("saved_filters").select("id,workspace_id,owner_id,name,scope,config,created_at").eq("workspace_id", wsId).order("created_at"),
     ]);
 
     return {
@@ -42,6 +43,7 @@ export const supabaseApi: Api = {
       tasks: check(tasks) as Data["tasks"],
       people: check(people) as Data["people"],
       assignees: check(assignees) as Data["assignees"],
+      savedFilters: check(filters) as Data["savedFilters"],
     };
   },
 
