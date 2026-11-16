@@ -55,7 +55,7 @@ export interface Store {
 
   addProject(name: string, color: string, defaultPriority: Priority, categoryId?: string | null): string;
   updateProject(id: string, patch: Partial<Pick<Project, "name" | "color" | "description" | "default_priority" | "default_assignee_ids" | "category_id">>): void;
-  addCategory(name: string): void;
+  addCategory(name: string): string;
   renameCategory(id: string, name: string): void;
   deleteCategory(id: string): void;
   setWorkspaceDefaults(ids: string[]): void;
@@ -342,6 +342,7 @@ export function StoreProvider({ api, children }: { api: Api; children: ReactNode
         const row = { id: uid(), workspace_id: data.workspace.id, name: name.trim() };
         mut((d) => ({ ...d, categories: [...d.categories, { ...row, created_at: new Date().toISOString() }] }));
         save(api.insert("categories", row));
+        return row.id;
       },
       renameCategory: (id, name) => {
         mut((d) => ({ ...d, categories: d.categories.map((c) => (c.id === id ? { ...c, name: name.trim() } : c)) }));

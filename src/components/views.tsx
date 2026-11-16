@@ -1,9 +1,10 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { Check as CheckIcon, Mail, Pencil, Plus, Trash2 } from "lucide-react";
+import { Check as CheckIcon, Mail, Pencil, Plus, Tags, Trash2 } from "lucide-react";
 import { useStore } from "../lib/store";
 import type { Person, Task } from "../lib/types";
 import { addDays, byUrgency, COLORS, firstName, greeting, isoDay, tint } from "../lib/util";
 import { NO_SEARCH, searchTasks, type TextSearch } from "../lib/listing";
+import { CategoryDialog } from "./Shell";
 import { mailtoLink } from "../lib/mail";
 import { TaskRow } from "./TaskList";
 import { SearchBox } from "./SearchBox";
@@ -133,15 +134,18 @@ function ProjectCards() {
 
 export function Projects({ onNewProject }: { onNewProject(): void }) {
   const s = useStore();
+  const [managing, setManaging] = useState(false);
   return (
     <div className="page">
       <header className="page-head">
         <h1>Projects</h1>
         <span className="header-actions">
+          <button className="btn" onClick={() => setManaging(true)}><Tags size={16} />Categories</button>
           <button className="btn primary" onClick={onNewProject}><Plus size={16} />New project</button>
           <TopActions />
         </span>
       </header>
+      {managing && <CategoryDialog onClose={() => setManaging(false)} />}
       {s.data.projects.length ? <ProjectCards /> : <Empty title="No projects yet">Create one to start adding tasks.</Empty>}
     </div>
   );
@@ -149,19 +153,40 @@ export function Projects({ onNewProject }: { onNewProject(): void }) {
 
 export function MyTasks() {
   const s = useStore();
+  const [search, setSearch] = useState<TextSearch>(NO_SEARCH);
   const mine = s.me ? s.tasksFor(s.me.id) : [];
   const b = buckets(mine);
   const open = mine.filter((t) => t.status !== "done").length;
+  const q = search.q.trim();
+  const found = q ? searchTasks(mine, search).sort(byUrgency) : [];
   return (
     <div className="page">
-      <header className="page-head">
-        <div>
+      <header className="page-head page-head-stack">
+        <div className="page-head-row">
           <h1>My tasks</h1>
-          <p className="date-line">{open === 0 ? "Nothing is assigned to you right now" : `${open} open task${open === 1 ? "" : "s"} assigned to you`}</p>
+          <TopActions />
         </div>
-        <TopActions />
+        <div className="page-head-row">
+          <p className="date-line">{open === 0 ? "Nothing is assigned to you right now" : `${open} open task${open === 1 ? "" : "s"} assigned to you`}</p>
+          <SearchBox
+            value={search.q}
+            onChange={(v) => setSearch({ ...search, q: v })}
+            includeClosed={search.includeClosed}
+            onIncludeClosed={(v) => setSearch({ ...search, includeClosed: v })}
+            placeholder="Search my tasks"
+          />
+        </div>
       </header>
-      {open === 0 ? (
+      {q ? (
+        found.length ? (
+          <>
+            <p className="search-count">{found.length} {found.length === 1 ? "match" : "matches"}{search.includeClosed ? ", closed tasks included" : ", open tasks only"}</p>
+            <div className="rows">{found.map((t) => <TaskRow key={t.id} task={t} showProject />)}</div>
+          </>
+        ) : (
+          <Empty title={`Nothing matches "${q}"`}>{search.includeClosed ? "Try a shorter word, or check the spelling." : "Tick Include closed to search finished tasks too."}</Empty>
+        )
+      ) : open === 0 ? (
         <Empty title="You're all caught up">Tasks appear here when you assign them to yourself.</Empty>
       ) : (
         <>

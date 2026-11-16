@@ -56,16 +56,21 @@ export function ListTools({ scope, cfg, base, onChange, search, onSearch, groups
   return (
     <div className="filter-box" aria-label="Filters">
       {showSearch && (
-        <SearchBox
-          value={search.q}
-          onChange={(q) => onSearch({ ...search, q })}
-          includeClosed={search.includeClosed}
-          onIncludeClosed={(includeClosed) => onSearch({ ...search, includeClosed })}
-          placeholder={scope === "all" ? "Search all tasks" : "Search this project"}
-        />
+        <div className="filter-search">
+          <SearchBox
+            value={search.q}
+            onChange={(q) => onSearch({ ...search, q })}
+            includeClosed={search.includeClosed}
+            onIncludeClosed={(includeClosed) => onSearch({ ...search, includeClosed })}
+            placeholder={scope === "all" ? "Search all tasks" : "Search this project"}
+          />
+        </div>
       )}
 
-      <div className="view-tools" role="group" aria-label="Filter, group and sort tasks">
+      <div className="filter-groups">
+        <section className="filter-group" aria-label="Filter">
+          <h3 className="filter-heading">Filter</h3>
+          <div className="view-tools">
         <label>
           <span>Assigned to</span>
           <select className={hot("who")} value={cfg.who} onChange={(e) => set("who", e.target.value)}>
@@ -90,6 +95,11 @@ export function ListTools({ scope, cfg, base, onChange, search, onSearch, groups
             </select>
           </label>
         )}
+          </div>
+        </section>
+        <section className="filter-group" aria-label="Group and sort">
+          <h3 className="filter-heading">Group/Sort</h3>
+          <div className="view-tools">
         {groups.length > 0 && (
           <label>
             <span>Group by</span>
@@ -109,6 +119,8 @@ export function ListTools({ scope, cfg, base, onChange, search, onSearch, groups
           Hide completed
         </label>
         <span className="view-count">Showing {shown} of {total}</span>
+          </div>
+        </section>
       </div>
 
       {active.length > 0 && (
