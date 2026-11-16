@@ -468,3 +468,19 @@ input[type="checkbox"] { width: 17px; height: 17px; accent-color: var(--primary)
 @media (max-width: 760px) { .reminder-stack { bottom: 80px; } }
 /* Due date, time and badge wrap inside the panel */
 .detail .field-row { flex-wrap: wrap; }
+
+/* Sign-in: a visible pale button for Google */
+.google-btn { background: #eef3ff; border-color: #c4d3f5; color: #1d2a4d; }
+.google-btn:hover { background: #e2eafd; border-color: #a9bfee; }
+
+/* Task panel heading: normal weight and size, on a pale band */
+.detail .detail-title { background: var(--primary-soft); border-radius: var(--r); padding: 10px 12px; align-items: flex-start; }
+.detail .title-input { font: 500 16px/1.4 var(--body); background: transparent; }
+.detail .title-input:hover { border-color: transparent; }
+
+/* Filter and sort row on project pages */
+.view-tools { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px 14px; margin: 0 0 14px; }
+.view-tools label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 600; color: var(--ink-2); }
+.view-tools select { font-size: 14px; padding: 7px 9px; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--surface); min-width: 170px; }
+.view-count { font-size: 13px; color: var(--ink-2); margin-left: auto; align-self: center; }
+.detail .field-row input { flex: 0 1 150px; min-width: 0; }

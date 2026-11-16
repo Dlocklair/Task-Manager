@@ -108,3 +108,21 @@ export function reminderMoment(task: { due_date: string | null; due_time: string
   if (!task.due_date || task.remind_before_minutes === null) return null;
   return new Date(dueMoment(task.due_date, task.due_time).getTime() - task.remind_before_minutes * 60000);
 }
+
+/** Sort order for a project's tasks. "assignedName" returns the first assignee's name for a task. */
+export function sortCompare(key: "due" | "priority" | "assigned" | "name", assignedName: (taskId: string) => string): (a: Task, b: Task) => number {
+  switch (key) {
+    case "priority":
+      return (a, b) => PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority] || byUrgency(a, b);
+    case "assigned":
+      return (a, b) => {
+        const an = assignedName(a.id), bn = assignedName(b.id);
+        if (an !== bn) return an === "" ? 1 : bn === "" ? -1 : an.localeCompare(bn);
+        return byUrgency(a, b);
+      };
+    case "name":
+      return (a, b) => a.title.localeCompare(b.title);
+    default:
+      return byUrgency;
+  }
+}

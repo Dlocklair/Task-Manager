@@ -2,23 +2,41 @@ import { useState } from "react";
 import { ChevronDown, Columns3, LayoutList, Pencil } from "lucide-react";
 import { useStore } from "../lib/store";
 import type { Project, Task } from "../lib/types";
-import { byUrgency, STATUSES, step, tint } from "../lib/util";
+import { sortCompare, STATUSES, step, tint } from "../lib/util";
 import { QuickAdd, TaskRow } from "./TaskList";
 import { AvatarStack, Check, DueBadge, Empty, PriorityFlag } from "./ui";
 
 type Step = "todo" | "in_progress" | "done";
+type SortKey = "due" | "priority" | "assigned" | "name";
+
+const SORTS: { id: SortKey; label: string }[] = [
+  { id: "due", label: "Due date" },
+  { id: "priority", label: "Priority" },
+  { id: "assigned", label: "Assigned to" },
+  { id: "name", label: "Name" },
+];
 
 export function ProjectView({ project, onEdit }: { project: Project; onEdit(): void }) {
   const s = useStore();
   const [mode, setMode] = useState<"list" | "board">("list");
   const [showDone, setShowDone] = useState(false);
-  const tasks = s.topLevel(project.id);
+  const [who, setWho] = useState("all");
+  const [sortBy, setSortBy] = useState<SortKey>("due");
+  const allTasks = s.topLevel(project.id);
+  // Filtering is by the task's own assignees. Subtasks are not filtered separately.
+  const tasks = allTasks.filter((t) => {
+    if (who === "all") return true;
+    const people = s.assigned(t.id);
+    return who === "none" ? people.length === 0 : people.some((p) => p.id === who);
+  });
   const prog = s.progress(project.id);
   const groups: Record<Step, Task[]> = { in_progress: [], todo: [], done: [] };
   for (const t of tasks) groups[step(t.status)].push(t);
-  groups.todo.sort(byUrgency);
-  groups.in_progress.sort(byUrgency);
-  groups.done.sort((a, b) => (b.completed_at ?? "").localeCompare(a.completed_at ?? ""));
+  const cmp = sortCompare(sortBy, (id) => s.assigned(id)[0]?.full_name ?? "");
+  groups.todo.sort(cmp);
+  groups.in_progress.sort(cmp);
+  if (sortBy === "due") groups.done.sort((a, b) => (b.completed_at ?? "").localeCompare(a.completed_at ?? ""));
+  else groups.done.sort(cmp);
 
   return (
     <div className="page" style={tint(project.color)}>
@@ -42,8 +60,35 @@ export function ProjectView({ project, onEdit }: { project: Project; onEdit(): v
         </div>
       </div>
 
-      {tasks.length === 0 ? (
+      {allTasks.length > 0 && (
+        <div className="view-tools" role="group" aria-label="Filter and sort tasks">
+          <label>
+            <span>Assigned to</span>
+            <select value={who} onChange={(e) => setWho(e.target.value)}>
+              <option value="all">Everyone</option>
+              <option value="none">Nobody yet</option>
+              {[...s.data.people].sort((a, b) => a.full_name.localeCompare(b.full_name)).map((p) => (
+                <option key={p.id} value={p.id}>{p.full_name}</option>
+              ))}
+            </select>
+          </label>
+          <label>
+            <span>Sort by</span>
+            <select value={sortBy} onChange={(e) => setSortBy(e.target.value as SortKey)}>
+              {SORTS.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
+            </select>
+          </label>
+          {(who !== "all" || sortBy !== "due") && (
+            <button className="btn small" onClick={() => { setWho("all"); setSortBy("due"); }}>Reset</button>
+          )}
+          <span className="view-count">Showing {tasks.length} of {allTasks.length}</span>
+        </div>
+      )}
+
+      {allTasks.length === 0 ? (
         <Empty title="This project has no tasks yet">Type the first one in the box above and press Enter.</Empty>
+      ) : tasks.length === 0 ? (
+        <Empty title="No tasks match this filter">Choose Everyone above to see all of them.</Empty>
       ) : mode === "list" ? (
         <>
           {(["in_progress", "todo"] as Step[]).map((g) =>

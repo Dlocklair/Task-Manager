@@ -66,7 +66,7 @@ export function Auth() {
         ) : (
           <form className="form" onSubmit={submit}>
             <h1>Sign in</h1>
-            <button className="btn big" type="button" disabled={busy} onClick={() => void signInWithGoogle()}>Continue with Google</button>
+            <button className="btn big google-btn" type="button" disabled={busy} onClick={() => void signInWithGoogle()}>Continue with Google</button>
             <p className="field-hint">or use your email</p>
             <label>Email<input type="email" autoComplete="email" autoFocus required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" /></label>
             {usePassword && (
