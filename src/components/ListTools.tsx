@@ -64,7 +64,7 @@ export function ListTools({ scope, cfg, base, onChange, search, onSearch, groups
   );
 
   return (
-    <div className="filter-box" aria-label="Filters">
+    <div className={"filter-box" + (showSearch ? "" : " grid-layout")} aria-label="Filters">
       {showSearch && (
         <div className="filter-top">
           <SearchBox

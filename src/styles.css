@@ -664,3 +664,38 @@ input[type="checkbox"] { width: 17px; height: 17px; accent-color: var(--primary)
 .search-box .check-inline { padding: 0 10px; gap: 6px; }
 .search-box .search { padding: 0 8px 0 10px; }
 @media (max-width: 760px) { .filter-group { flex-direction: column; } }
+
+/* All tasks: one grid so Assigned to lines up with Group by, and Priority with Sort by */
+.filter-box.grid-layout .filter-groups { display: grid; grid-template-columns: max-content repeat(3, minmax(150px, 180px)) max-content; column-gap: 14px; row-gap: 14px; align-items: end; }
+.filter-box.grid-layout .filter-group, .filter-box.grid-layout .view-tools { display: contents; }
+.filter-box.grid-layout .filter-heading { align-self: end; }
+.filter-box.grid-layout .view-tools select { width: 100%; min-width: 0; }
+.filter-box.grid-layout .view-tools label.check-inline { align-self: end; padding-bottom: 8px; }
+.filter-box.grid-layout .view-count { align-self: end; padding-bottom: 8px; white-space: nowrap; }
+@media (max-width: 760px) {
+  .filter-box.grid-layout .filter-groups { display: flex; flex-direction: column; }
+  .filter-box.grid-layout .filter-group { display: flex; flex-direction: column; align-items: stretch; gap: 8px; }
+  .filter-box.grid-layout .view-tools { display: flex; flex-wrap: wrap; gap: 10px 12px; }
+  .filter-box.grid-layout .view-tools select { min-width: 150px; }
+}
+
+/* Explicit grid placement: row 1 is Filter, row 2 is Group/Sort, columns line up across both rows */
+.grid-layout .filter-group[aria-label="Filter"] > .filter-heading { grid-column: 1; grid-row: 1; }
+.grid-layout .filter-group[aria-label="Filter"] .view-tools > :nth-child(1) { grid-column: 2; grid-row: 1; }
+.grid-layout .filter-group[aria-label="Filter"] .view-tools > :nth-child(2) { grid-column: 3; grid-row: 1; }
+.grid-layout .filter-group[aria-label="Filter"] .view-tools > :nth-child(3) { grid-column: 4; grid-row: 1; }
+.grid-layout .filter-group[aria-label="Group and sort"] > .filter-heading { grid-column: 1; grid-row: 2; }
+.grid-layout .filter-group[aria-label="Group and sort"] .view-tools > :nth-child(1) { grid-column: 2; grid-row: 2; }
+.grid-layout .filter-group[aria-label="Group and sort"] .view-tools > :nth-child(2) { grid-column: 3; grid-row: 2; }
+.grid-layout .filter-group[aria-label="Group and sort"] .view-tools > :nth-child(3) { grid-column: 4; grid-row: 2; }
+.grid-layout .filter-group[aria-label="Group and sort"] .view-tools > :nth-child(4) { grid-column: 5; grid-row: 2; }
+@media (max-width: 760px) {
+  .grid-layout .filter-heading, .grid-layout .view-tools > * { grid-column: auto !important; grid-row: auto !important; }
+}
+
+/* Category dialog: dark text so names, counts and hints are easy to read on white */
+.cat-item, .cat-item label, .cat-item .btn, .cat-item input, .cat-project-name { color: var(--ink); }
+.cat-item input { background: var(--surface); }
+.cat-count, .cat-projects small, .cat-projects .field-hint { color: var(--ink-2); }
+.modal .field-hint, .modal h2 { color: var(--ink); }
+.modal .field-hint { color: var(--ink-2); }
