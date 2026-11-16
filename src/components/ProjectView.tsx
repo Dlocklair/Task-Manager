@@ -7,6 +7,7 @@ import { sortCompare, STATUSES, step, tint } from "../lib/util";
 import { QuickAdd } from "./TaskList";
 import { mailtoLink } from "../lib/mail";
 import { ListTools } from "./ListTools";
+import { TopActions } from "./TopActions";
 import { TaskSections } from "./TaskSections";
 import { AvatarStack, Check, DueBadge, Empty, PriorityFlag } from "./ui";
 
@@ -38,6 +39,9 @@ export function ProjectView({ project, onEdit }: { project: Project; onEdit(): v
 
   return (
     <div className="page" style={tint(project.color)}>
+      <div className="top-row">
+        <TopActions />
+      </div>
       <header className="banner">
         <div className="banner-top">
           <h1>{project.name}</h1>

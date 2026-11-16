@@ -7,6 +7,8 @@ import { NO_SEARCH, searchTasks, type TextSearch } from "../lib/listing";
 import { mailtoLink } from "../lib/mail";
 import { TaskRow } from "./TaskList";
 import { SearchBox } from "./SearchBox";
+import { TopActions } from "./TopActions";
+import { groupProjects } from "../lib/categories";
 import { PeoplePicks } from "./PeoplePicks";
 import { Avatar, Empty, Modal, Swatches } from "./ui";
 
@@ -42,18 +44,21 @@ export function Home({ onNewProject }: { onNewProject(): void }) {
 
   return (
     <div className="page">
-      <header className="page-head">
-        <div>
+      <header className="page-head page-head-stack">
+        <div className="page-head-row">
           <p className="date-line">{new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}</p>
-          <h1>{greeting()}{name && `, ${name}`}</h1>
+          <TopActions />
         </div>
-        <SearchBox
-          value={search.q}
-          onChange={(v) => setSearch({ ...search, q: v })}
-          includeClosed={search.includeClosed}
-          onIncludeClosed={(v) => setSearch({ ...search, includeClosed: v })}
-          placeholder="Search all tasks"
-        />
+        <div className="page-head-row">
+          <h1>{greeting()}{name && `, ${name}`}</h1>
+          <SearchBox
+            value={search.q}
+            onChange={(v) => setSearch({ ...search, q: v })}
+            includeClosed={search.includeClosed}
+            onIncludeClosed={(v) => setSearch({ ...search, includeClosed: v })}
+            placeholder="Search all tasks"
+          />
+        </div>
       </header>
 
       {q ? (
@@ -97,22 +102,32 @@ export function Home({ onNewProject }: { onNewProject(): void }) {
 
 function ProjectCards() {
   const s = useStore();
+  const groups = groupProjects(s.data.projects, s.data.categories);
+  const nested = s.data.categories.length > 0;
   return (
-    <div className="project-cards">
-      {s.data.projects.map((p) => {
-        const g = s.progress(p.id);
-        return (
-          <button key={p.id} className="project-card" style={tint(p.color)} onClick={() => s.go({ kind: "project", id: p.id })}>
-            <span className="project-card-name">{p.name}</span>
-            <span className="project-card-pct">{g.pct}%</span>
-            <div className="bar thin"><span style={{ width: `${g.pct}%` }} /></div>
-            <span className="project-card-meta">
-              {g.total - g.done} open{g.late > 0 && <em>{g.late} overdue</em>}
-            </span>
-          </button>
-        );
-      })}
-    </div>
+    <>
+      {groups.map((group) => (
+        <section key={group.category?.id ?? "none"} className="card-group">
+          {nested && <h3 className="card-group-title">{group.category?.name ?? "No category"}</h3>}
+          <div className={"project-cards" + (nested ? " nested" : "")}>
+            {group.projects.map((p) => {
+              const g = s.progress(p.id);
+              return (
+                <button key={p.id} className="project-card" style={tint(p.color)} onClick={() => s.go({ kind: "project", id: p.id })}>
+                  <span className="project-card-name">{p.name}</span>
+                  <span className="project-card-pct">{g.pct}%</span>
+                  <div className="bar thin"><span style={{ width: `${g.pct}%` }} /></div>
+                  <span className="project-card-meta">
+                    {g.total - g.done} open{g.late > 0 && <em>{g.late} overdue</em>}
+                  </span>
+                </button>
+              );
+            })}
+            {group.projects.length === 0 && <p className="group-empty">No projects in this category yet.</p>}
+          </div>
+        </section>
+      ))}
+    </>
   );
 }
 
@@ -122,7 +137,10 @@ export function Projects({ onNewProject }: { onNewProject(): void }) {
     <div className="page">
       <header className="page-head">
         <h1>Projects</h1>
-        <button className="btn primary" onClick={onNewProject}><Plus size={16} />New project</button>
+        <span className="header-actions">
+          <button className="btn primary" onClick={onNewProject}><Plus size={16} />New project</button>
+          <TopActions />
+        </span>
       </header>
       {s.data.projects.length ? <ProjectCards /> : <Empty title="No projects yet">Create one to start adding tasks.</Empty>}
     </div>
@@ -141,6 +159,7 @@ export function MyTasks() {
           <h1>My tasks</h1>
           <p className="date-line">{open === 0 ? "Nothing is assigned to you right now" : `${open} open task${open === 1 ? "" : "s"} assigned to you`}</p>
         </div>
+        <TopActions />
       </header>
       {open === 0 ? (
         <Empty title="You're all caught up">Tasks appear here when you assign them to yourself.</Empty>
@@ -199,7 +218,10 @@ export function People() {
           <h1>People</h1>
           <p className="date-line">Anyone you assign tasks to. They don't need an account.</p>
         </div>
-        <button className="btn primary" onClick={() => setAdding(true)}><Plus size={16} />Add person</button>
+        <span className="header-actions">
+          <button className="btn primary" onClick={() => setAdding(true)}><Plus size={16} />Add person</button>
+          <TopActions />
+        </span>
       </header>
 
       <section className="defaults-card" aria-labelledby="defaults-title">

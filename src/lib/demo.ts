@@ -12,12 +12,17 @@ function build(): Data {
     { id: "p-joe", workspace_id: WS, user_id: null, full_name: "Joe Alvarez", email: null, color: COLORS[1] },
     { id: "p-sam", workspace_id: WS, user_id: null, full_name: "Sam Okafor", email: null, color: COLORS[3] },
   ];
+  const demoCategoryOf: Record<string, string | null> = { "pr-kitchen": "cat-home", "pr-lake": "cat-home", "pr-app": "cat-work", "pr-taxes": null };
   const projects: Project[] = [
     { id: "pr-kitchen", name: "Kitchen remodel", color: COLORS[4] },
     { id: "pr-lake", name: "Lake house turnover", color: COLORS[1] },
     { id: "pr-app", name: "Gift app launch", color: COLORS[6] },
     { id: "pr-taxes", name: "Taxes and paperwork", color: COLORS[3] },
-  ].map((p, i) => ({ ...p, workspace_id: WS, description: null, position: i, default_priority: "medium", default_assignee_ids: null, created_at: now }));
+  ].map((p, i) => ({ ...p, workspace_id: WS, description: null, position: i, default_priority: "medium", default_assignee_ids: null, category_id: demoCategoryOf[p.id] ?? null, created_at: now }));
+  const categories: Data["categories"] = [
+    { id: "cat-home", workspace_id: WS, name: "Home", created_at: now },
+    { id: "cat-work", workspace_id: WS, name: "Work", created_at: now },
+  ];
 
   const tasks: Task[] = [];
   const assignees: Data["assignees"] = [];
@@ -61,7 +66,7 @@ function build(): Data {
   add("pr-taxes", "Gather the 1099s", "todo", 20, "none", ["p-me"]);
   add("pr-taxes", "Send receipts to the accountant", "todo", null, "low", ["p-me"]);
 
-  return { userId: "demo-user", email: "demo@example.com", workspace: { id: WS, name: "Demo workspace", default_assignee_ids: [] }, projects, tasks, people, assignees, savedFilters: [] };
+  return { userId: "demo-user", email: "demo@example.com", workspace: { id: WS, name: "Demo workspace", default_assignee_ids: [] }, projects, tasks, people, assignees, savedFilters: [], categories };
 }
 
 const demoNotes: Record<string, Note[]> = {

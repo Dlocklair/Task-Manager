@@ -53,8 +53,11 @@ export interface Store {
   tasksFor(personId: string): Task[];
   progress(projectId: string): { total: number; done: number; late: number; pct: number };
 
-  addProject(name: string, color: string, defaultPriority: Priority): string;
-  updateProject(id: string, patch: Partial<Pick<Project, "name" | "color" | "description" | "default_priority" | "default_assignee_ids">>): void;
+  addProject(name: string, color: string, defaultPriority: Priority, categoryId?: string | null): string;
+  updateProject(id: string, patch: Partial<Pick<Project, "name" | "color" | "description" | "default_priority" | "default_assignee_ids" | "category_id">>): void;
+  addCategory(name: string): void;
+  renameCategory(id: string, name: string): void;
+  deleteCategory(id: string): void;
   setWorkspaceDefaults(ids: string[]): void;
   /** People who are assigned to new tasks in this project (project override, else workspace default). */
   defaultAssigneesFor(projectId: string): Person[];
@@ -325,8 +328,8 @@ export function StoreProvider({ api, children }: { api: Api; children: ReactNode
         return { total: list.length, done, late, pct: list.length ? Math.round((100 * done) / list.length) : 0 };
       },
 
-      addProject: (name, color, defaultPriority) => {
-        const row = { id: uid(), workspace_id: data.workspace.id, name, color, position: nextPos(), default_priority: defaultPriority };
+      addProject: (name, color, defaultPriority, categoryId = null) => {
+        const row = { id: uid(), workspace_id: data.workspace.id, name, color, position: nextPos(), default_priority: defaultPriority, category_id: categoryId };
         mut((d) => ({ ...d, projects: [...d.projects, { ...row, description: null, default_assignee_ids: null, created_at: new Date().toISOString() }] }));
         save(api.insert("projects", row));
         return row.id;
@@ -334,6 +337,20 @@ export function StoreProvider({ api, children }: { api: Api; children: ReactNode
       updateProject: (id, patch) => {
         mut((d) => ({ ...d, projects: d.projects.map((p) => (p.id === id ? { ...p, ...patch } : p)) }));
         save(api.update("projects", id, patch));
+      },
+      addCategory: (name) => {
+        const row = { id: uid(), workspace_id: data.workspace.id, name: name.trim() };
+        mut((d) => ({ ...d, categories: [...d.categories, { ...row, created_at: new Date().toISOString() }] }));
+        save(api.insert("categories", row));
+      },
+      renameCategory: (id, name) => {
+        mut((d) => ({ ...d, categories: d.categories.map((c) => (c.id === id ? { ...c, name: name.trim() } : c)) }));
+        save(api.update("categories", id, { name: name.trim() }));
+      },
+      deleteCategory: (id) => {
+        // Projects in the category stay, and move out of it.
+        mut((d) => ({ ...d, categories: d.categories.filter((c) => c.id !== id), projects: d.projects.map((p) => (p.category_id === id ? { ...p, category_id: null } : p)) }));
+        save(api.remove("categories", id));
       },
       setWorkspaceDefaults: (ids) => {
         mut((d) => ({ ...d, workspace: { ...d.workspace, default_assignee_ids: ids } }));

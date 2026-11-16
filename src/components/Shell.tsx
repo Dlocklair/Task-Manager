@@ -1,7 +1,8 @@
 import { useState, type FormEvent } from "react";
-import { CircleCheck, FolderKanban, House, LayoutList, LogOut, Plus, Users } from "lucide-react";
+import { CircleCheck, FolderKanban, House, LayoutList, LogOut, Plus, Tags, Users, X } from "lucide-react";
+import { groupProjects } from "../lib/categories";
 import { useStore } from "../lib/store";
-import type { Priority, Project, View } from "../lib/types";
+import type { Category, Priority, Project, View } from "../lib/types";
 import { COLORS, PRIORITIES, tint } from "../lib/util";
 import { Avatar, Modal, Swatches } from "./ui";
 import { PeoplePicks } from "./PeoplePicks";
@@ -15,6 +16,8 @@ const NAV: { view: View; label: string; icon: typeof House }[] = [
 
 export function Sidebar({ onNewProject, onSignOut }: { onNewProject(): void; onSignOut?: () => void }) {
   const s = useStore();
+  const [managing, setManaging] = useState(false);
+  const groups = groupProjects(s.data.projects, s.data.categories);
   const myOpen = s.me ? s.tasksFor(s.me.id).filter((t) => t.status !== "done").length : 0;
   return (
     <nav className="side" aria-label="Main">
@@ -30,22 +33,34 @@ export function Sidebar({ onNewProject, onSignOut }: { onNewProject(): void; onS
 
       <div className="side-label">
         Projects
-        <button className="icon-btn on-dark" onClick={onNewProject} aria-label="New project"><Plus size={16} /></button>
+        <span className="side-label-actions">
+          <button className="icon-btn on-dark" onClick={() => setManaging(true)} aria-label="Manage categories" title="Manage categories"><Tags size={16} /></button>
+          <button className="icon-btn on-dark" onClick={onNewProject} aria-label="New project"><Plus size={16} /></button>
+        </span>
       </div>
       <div className="side-projects">
-        {s.data.projects.map((p) => {
-          const g = s.progress(p.id);
-          const on = s.view.kind === "project" && s.view.id === p.id;
-          return (
-            <button key={p.id} className={"side-link project" + (on ? " on" : "")} style={tint(p.color)} onClick={() => s.go({ kind: "project", id: p.id })}>
-              <i />
-              <span className="grow">{p.name}</span>
-              <span className="badge quiet">{g.total - g.done}</span>
-            </button>
-          );
-        })}
+        {groups.map((group) => (
+          <div key={group.category?.id ?? "none"} className="side-group">
+            {s.data.categories.length > 0 && <div className="side-cat">{group.category?.name ?? "No category"}</div>}
+            <div className={"side-group-items" + (s.data.categories.length > 0 ? " nested" : "")}>
+              {group.projects.map((p) => {
+                const g = s.progress(p.id);
+                const on = s.view.kind === "project" && s.view.id === p.id;
+                return (
+                  <button key={p.id} className={"side-link project" + (on ? " on" : "")} style={tint(p.color)} onClick={() => s.go({ kind: "project", id: p.id })}>
+                    <i />
+                    <span className="grow">{p.name}</span>
+                    <span className="badge quiet">{g.total - g.done}</span>
+                  </button>
+                );
+              })}
+              {group.projects.length === 0 && <p className="side-empty">No projects here yet</p>}
+            </div>
+          </div>
+        ))}
         {s.data.projects.length === 0 && <p className="side-empty">No projects yet</p>}
       </div>
+      {managing && <CategoryDialog onClose={() => setManaging(false)} />}
 
       <div className="side-foot">
         {s.me && <Avatar person={s.me} size={30} />}
@@ -82,6 +97,7 @@ export function ProjectDialog({ project, onClose }: { project?: Project; onClose
   const [name, setName] = useState(project?.name ?? "");
   const [color, setColor] = useState(project?.color ?? COLORS[s.data.projects.length % COLORS.length]);
   const [defaultPriority, setDefaultPriority] = useState<Priority>(project?.default_priority ?? "medium");
+  const [categoryId, setCategoryId] = useState<string | null>(project?.category_id ?? null);
   // null on the project means it uses the workspace default assignees.
   const [ownDefaults, setOwnDefaults] = useState(project?.default_assignee_ids !== null && project?.default_assignee_ids !== undefined);
   const [assignees, setAssignees] = useState<string[]>(
@@ -92,8 +108,8 @@ export function ProjectDialog({ project, onClose }: { project?: Project; onClose
     const n = name.trim();
     if (!n) return;
     const default_assignee_ids = ownDefaults ? assignees : null;
-    if (project) s.updateProject(project.id, { name: n, color, default_priority: defaultPriority, default_assignee_ids });
-    else s.go({ kind: "project", id: s.addProject(n, color, defaultPriority) });
+    if (project) s.updateProject(project.id, { name: n, color, default_priority: defaultPriority, default_assignee_ids, category_id: categoryId });
+    else s.go({ kind: "project", id: s.addProject(n, color, defaultPriority, categoryId) });
     onClose();
   };
   return (
@@ -101,6 +117,14 @@ export function ProjectDialog({ project, onClose }: { project?: Project; onClose
       <form className="form" onSubmit={submit}>
         <label>Name<input autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="Kitchen remodel" required /></label>
         <div className="form-field">Color<Swatches value={color} onChange={setColor} colors={COLORS.includes(color) ? COLORS : [color, ...COLORS]} /></div>
+        <div className="form-field">
+          <label htmlFor="proj-cat">Category</label>
+          <select id="proj-cat" value={categoryId ?? ""} onChange={(e) => setCategoryId(e.target.value || null)}>
+            <option value="">No category</option>
+            {s.data.categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+          <p className="field-hint">Groups this project under a category in the sidebar. Manage categories with the tag button beside Projects.</p>
+        </div>
         <div className="form-field">
           <label htmlFor="proj-prio">Default priority</label>
           <select id="proj-prio" value={defaultPriority} onChange={(e) => setDefaultPriority(e.target.value as Priority)}>
@@ -178,5 +202,65 @@ export function NewTaskDialog({ onClose }: { onClose(): void }) {
         </div>
       </form>
     </Modal>
+  );
+}
+
+export function CategoryDialog({ onClose }: { onClose(): void }) {
+  const s = useStore();
+  const [name, setName] = useState("");
+  const add = (e: FormEvent) => {
+    e.preventDefault();
+    const n = name.trim();
+    if (!n) return;
+    s.addCategory(n);
+    setName("");
+  };
+  const sorted = [...s.data.categories].sort((a, b) => a.name.localeCompare(b.name));
+  return (
+    <Modal title="Categories" onClose={onClose}>
+      <form className="form" onSubmit={add}>
+        <p className="field-hint">Categories group your projects in the sidebar, such as Work or Personal.</p>
+        <div className="form-inline">
+          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="New category, such as Work" aria-label="New category name" maxLength={60} />
+          <button className="btn primary" type="submit" disabled={!name.trim()}>Add</button>
+        </div>
+      </form>
+      {sorted.length > 0 && (
+        <ul className="cat-list">
+          {sorted.map((c) => <CategoryRow key={c.id} category={c} />)}
+        </ul>
+      )}
+      <div className="form-actions">
+        <span className="grow" />
+        <button type="button" className="btn primary" onClick={onClose}>Done</button>
+      </div>
+    </Modal>
+  );
+}
+
+function CategoryRow({ category }: { category: Category }) {
+  const s = useStore();
+  const [name, setName] = useState(category.name);
+  const count = s.data.projects.filter((p) => p.category_id === category.id).length;
+  const commit = () => {
+    const n = name.trim();
+    if (!n) setName(category.name);
+    else if (n !== category.name) s.renameCategory(category.id, n);
+  };
+  return (
+    <li className="cat-row">
+      <input value={name} onChange={(e) => setName(e.target.value)} onBlur={commit} onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()} aria-label={`Name for ${category.name}`} maxLength={60} />
+      <span className="cat-count">{count} project{count === 1 ? "" : "s"}</span>
+      <button
+        type="button"
+        className="icon-btn"
+        aria-label={`Delete ${category.name}`}
+        onClick={() => {
+          if (window.confirm(`Delete the category "${category.name}"? Its projects stay, but move out of it.`)) s.deleteCategory(category.id);
+        }}
+      >
+        <X size={16} />
+      </button>
+    </li>
   );
 }

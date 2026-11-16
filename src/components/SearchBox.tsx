@@ -19,6 +19,10 @@ export function SearchBox({
   const on = value.trim().length > 0;
   return (
     <div className={`search-box ${className}`.trim()}>
+      <label className={"check-inline" + (includeClosed ? " is-set" : "")}>
+        <input type="checkbox" checked={includeClosed} onChange={(e) => onIncludeClosed(e.target.checked)} />
+        Include closed
+      </label>
       <label className={"search" + (on ? " is-set" : "")}>
         <Search size={16} />
         <input value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} aria-label={placeholder} />
@@ -27,10 +31,6 @@ export function SearchBox({
             <X size={14} />
           </button>
         )}
-      </label>
-      <label className={"check-inline" + (includeClosed ? " is-set" : "")}>
-        <input type="checkbox" checked={includeClosed} onChange={(e) => onIncludeClosed(e.target.checked)} />
-        Include closed
       </label>
     </div>
   );

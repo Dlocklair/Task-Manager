@@ -11,6 +11,15 @@ export interface Project {
   default_priority: Priority;
   /** null = use the workspace default assignees */
   default_assignee_ids: string[] | null;
+  /** null = not in a category */
+  category_id: string | null;
+  created_at: string;
+}
+
+export interface Category {
+  id: string;
+  workspace_id: string;
+  name: string;
   created_at: string;
 }
 
@@ -87,13 +96,14 @@ export interface Data {
   email: string;
   workspace: { id: string; name: string; default_assignee_ids: string[] };
   projects: Project[];
+  categories: Category[];
   tasks: Task[];
   people: Person[];
   assignees: Assignee[];
   savedFilters: SavedFilter[];
 }
 
-export type Table = "workspaces" | "projects" | "tasks" | "people" | "task_comments" | "saved_filters";
+export type Table = "workspaces" | "projects" | "categories" | "tasks" | "people" | "task_comments" | "saved_filters";
 
 /** Everything the app needs from a backend. Supabase and the demo both implement it. */
 export interface Api {

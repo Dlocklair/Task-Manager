@@ -1,4 +1,4 @@
-import type { Api, Assignee, Data, Note, Person, Project, SavedFilter, Task } from "./types";
+import type { Api, Assignee, Category, Data, Note, Person, Project, SavedFilter, Task } from "./types";
 import { COLORS } from "./util";
 
 // A device-only copy of the data. It lives in this browser on this device and is never sent anywhere.
@@ -10,6 +10,7 @@ const ME = "device-me";
 interface Db {
   workspace: Data["workspace"];
   projects: Project[];
+  categories: Category[];
   tasks: Task[];
   people: Person[];
   assignees: Assignee[];
@@ -21,6 +22,7 @@ function empty(): Db {
   return {
     workspace: { id: WS, name: "On this device", default_assignee_ids: [] },
     projects: [],
+    categories: [],
     tasks: [],
     people: [{ id: "device-you", workspace_id: WS, user_id: ME, full_name: "You", email: null, color: COLORS[0] }],
     assignees: [],
@@ -74,6 +76,7 @@ export const deviceApi: Api = {
       email: "",
       workspace: db.workspace,
       projects: db.projects,
+      categories: db.categories,
       tasks: db.tasks,
       people: db.people,
       assignees: db.assignees,
@@ -93,6 +96,9 @@ export const deviceApi: Api = {
           workspace_id: WS, description: null, due_time: null, remind_before_minutes: null, parent_task_id: null,
           completed_at: row.status === "done" ? now : null, created_at: now, ...row,
         } as Task);
+        break;
+      case "categories":
+        db.categories.push({ created_at: now, ...row } as Category);
         break;
       case "people":
         db.people.push({ workspace_id: WS, user_id: null, ...row } as Person);
@@ -117,6 +123,9 @@ export const deviceApi: Api = {
         break;
       case "projects":
         db.projects = db.projects.map((p) => (p.id === id ? { ...p, ...patch } : p));
+        break;
+      case "categories":
+        db.categories = db.categories.map((c) => (c.id === id ? { ...c, ...patch } : c));
         break;
       case "people":
         db.people = db.people.map((p) => (p.id === id ? { ...p, ...patch } : p));
@@ -156,6 +165,10 @@ export const deviceApi: Api = {
         db.projects = db.projects.filter((p) => p.id !== id);
         break;
       }
+      case "categories":
+        db.categories = db.categories.filter((c) => c.id !== id);
+        db.projects = db.projects.map((p) => (p.category_id === id ? { ...p, category_id: null } : p));
+        break;
       case "people":
         db.people = db.people.filter((p) => p.id !== id);
         db.assignees = db.assignees.filter((a) => a.person_id !== id);

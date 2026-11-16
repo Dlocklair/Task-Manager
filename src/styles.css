@@ -305,21 +305,19 @@ input[type="checkbox"] { width: 17px; height: 17px; accent-color: var(--primary)
 /* ---------- Floating and mobile controls ---------- */
 .new-task { display: inline-flex; align-items: center; gap: 8px; background: var(--primary); color: #fff; font-weight: 700; padding: 13px 20px; border-radius: 99px; box-shadow: 0 10px 24px rgb(49 87 224 / 0.38); }
 .new-task:hover { background: var(--primary-dark); }
-.main-top { max-width: var(--page-w, 1080px); margin: 0 auto; padding: 24px 40px 0; display: flex; justify-content: var(--cta-justify, flex-end); }
-.has-detail .main-top { display: none; }
+.has-detail .top-actions { display: none; }
 .tabs { display: none; }
 
 @media (max-width: 1100px) {
   .app { grid-template-columns: 220px minmax(0, 1fr); }
   .page { padding: 28px 24px 120px; }
-  .main-top { padding: 20px 24px 0; }
   .home-grid { grid-template-columns: 1fr; }
   .home-side .project-cards { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
 }
 
 @media (max-width: 760px) {
   .app { grid-template-columns: 1fr; }
-  .side, .main-top { display: none; }
+  .side, .top-actions { display: none; }
   .page { padding: 20px 16px 110px; }
   h1 { font-size: 25px; }
   .banner { padding: 20px 18px 18px; border-radius: var(--r); }
@@ -525,7 +523,7 @@ input[type="checkbox"] { width: 17px; height: 17px; accent-color: var(--primary)
 
 /* Top bar actions, person edit, banner actions, disabled actions */
 .top-actions { display: flex; align-items: center; gap: 10px; }
-.main-top .btn { white-space: nowrap; }
+.top-actions .btn { white-space: nowrap; }
 .banner-actions { display: flex; align-items: center; gap: 8px; }
 .banner-actions a.icon-btn { display: inline-flex; align-items: center; justify-content: center; }
 .person-wrap { position: relative; }
@@ -564,3 +562,45 @@ input[type="checkbox"] { width: 17px; height: 17px; accent-color: var(--primary)
 .tweaks-group input[type=number] { width: 100%; padding: 7px 9px; font-size: 14px; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--surface); }
 .tweaks-css { width: 100%; min-height: 110px; font: 12px ui-monospace, Menlo, Consolas, monospace; padding: 8px; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--canvas); color: var(--ink); }
 .tweaks-row { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* Page headers: row 1 has the date and actions, row 2 has the title and search */
+.page-head-stack { flex-direction: column; align-items: stretch; gap: 8px; }
+.page-head-row { display: flex; align-items: center; justify-content: space-between; gap: 12px 20px; flex-wrap: wrap; }
+.page-head-row h1, .page-head-row .date-line { margin: 0; }
+.header-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.top-row { display: flex; justify-content: flex-end; margin-bottom: 14px; }
+
+/* Filter panel: every control in one tinted box */
+.filter-box { display: flex; flex-direction: column; gap: 12px; margin-bottom: 22px; padding: 14px 16px; background: #e8edf7; border: 1px solid #d6dfef; border-radius: var(--r); }
+.filter-box .view-tools, .filter-box .active-bar, .filter-box .saved-bar { margin: 0; }
+.filter-box .view-tools select { background: var(--surface); }
+.filter-box .active-bar { background: var(--surface); }
+.filter-box .saved-bar { justify-content: flex-start; color: var(--ink); }
+.filter-box .search-box { margin-bottom: 0; }
+
+/* Sidebar: projects sit under their category */
+.side-label-actions { display: flex; align-items: center; gap: 2px; }
+.side-group { display: flex; flex-direction: column; gap: 2px; }
+.side-cat { font-size: 12px; font-weight: 600; color: #8f99b3; padding: 12px 10px 4px; }
+.side-group-items { display: flex; flex-direction: column; gap: 2px; }
+.side-group-items.nested { margin-left: 10px; padding-left: 8px; border-left: 2px solid rgb(255 255 255 / 0.12); }
+
+/* Projects page and Home: category headings with indented cards */
+.card-group { display: flex; flex-direction: column; gap: 10px; margin-bottom: 26px; }
+.card-group-title { font: 700 16px var(--display); margin: 0; }
+.project-cards.nested { padding-left: 16px; border-left: 2px solid var(--line); }
+.group-empty { color: var(--ink-3); font-size: 14px; margin: 0; }
+
+/* Category dialog */
+.form-inline { display: flex; gap: 8px; }
+.form-inline input { flex: 1; min-width: 0; }
+.cat-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; }
+.cat-row { display: flex; align-items: center; gap: 10px; }
+.cat-row input { flex: 1; min-width: 0; }
+.cat-count { font-size: 13px; color: var(--ink-3); white-space: nowrap; }
+
+/* Include closed sits left of the search field on one line; it wraps only on phones */
+.page-head-row .search-box { flex-wrap: nowrap; }
+@media (max-width: 760px) { .page-head-row .search-box { flex-wrap: wrap; } }
+
+.search-box .check-inline { white-space: nowrap; }

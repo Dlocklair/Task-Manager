@@ -18,11 +18,13 @@ interface Props {
   /** Grouping choices offered here. Empty hides the Group by control. */
   groups: GroupKey[];
   showProject: boolean;
+  /** Show the search box inside the filter panel. Pages that place search in their header turn this off. */
+  showSearch?: boolean;
   shown: number;
   total: number;
 }
 
-export function ListTools({ scope, cfg, base, onChange, search, onSearch, groups, showProject, shown, total }: Props) {
+export function ListTools({ scope, cfg, base, onChange, search, onSearch, groups, showProject, showSearch = true, shown, total }: Props) {
   const s = useStore();
   const [naming, setNaming] = useState(false);
   const [name, setName] = useState("");
@@ -52,15 +54,16 @@ export function ListTools({ scope, cfg, base, onChange, search, onSearch, groups
   };
 
   return (
-    <>
-      <SearchBox
-        value={search.q}
-        onChange={(q) => onSearch({ ...search, q })}
-        includeClosed={search.includeClosed}
-        onIncludeClosed={(includeClosed) => onSearch({ ...search, includeClosed })}
-        placeholder={scope === "all" ? "Search all tasks" : "Search this project"}
-        className="list-search"
-      />
+    <div className="filter-box" aria-label="Filters">
+      {showSearch && (
+        <SearchBox
+          value={search.q}
+          onChange={(q) => onSearch({ ...search, q })}
+          includeClosed={search.includeClosed}
+          onIncludeClosed={(includeClosed) => onSearch({ ...search, includeClosed })}
+          placeholder={scope === "all" ? "Search all tasks" : "Search this project"}
+        />
+      )}
 
       <div className="view-tools" role="group" aria-label="Filter, group and sort tasks">
         <label>
@@ -103,7 +106,7 @@ export function ListTools({ scope, cfg, base, onChange, search, onSearch, groups
         </label>
         <label className="check-inline">
           <input type="checkbox" checked={cfg.hideDone} onChange={(e) => set("hideDone", e.target.checked)} />
-          Hide done
+          Hide completed
         </label>
         <span className="view-count">Showing {shown} of {total}</span>
       </div>
@@ -134,6 +137,6 @@ export function ListTools({ scope, cfg, base, onChange, search, onSearch, groups
           </form>
         )}
       </div>
-    </>
+    </div>
   );
 }

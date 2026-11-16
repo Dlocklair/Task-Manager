@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { ListChecks, Plus } from "lucide-react";
 import type { Session } from "@supabase/supabase-js";
 import { demoApi } from "./lib/demo";
 import { StoreProvider, useStore } from "./lib/store";
@@ -16,6 +15,7 @@ import { applySavedTweaks, TweaksPanel, tweaksEnabled } from "./components/Tweak
 import { TaskDetail } from "./components/TaskDetail";
 import { Home, MyTasks, People, Projects } from "./components/views";
 import { AllTasks } from "./components/AllTasks";
+import { NewTaskContext } from "./components/TopActions";
 
 applySavedTweaks();
 
@@ -66,22 +66,14 @@ function Workspace({ onSignOut }: { onSignOut?: () => void }) {
     <div className={"app" + (selected ? " has-detail" : "")}>
       <Sidebar onNewProject={newProject} onSignOut={onSignOut} />
       <main className="main">
-        {!selected && (
-          <div className="main-top">
-            <div className="top-actions">
-              <button className={"btn" + (s.selecting ? " primary" : "")} aria-pressed={s.selecting} onClick={() => s.setSelecting(!s.selecting)}>
-                <ListChecks size={17} />{s.selecting ? "Done selecting" : "Select multiple"}
-              </button>
-              <button className="new-task" onClick={() => setNewTask(true)}><Plus size={18} />New task</button>
-            </div>
-          </div>
-        )}
+        <NewTaskContext.Provider value={() => setNewTask(true)}>
         {s.view.kind === "home" && <Home onNewProject={newProject} />}
         {s.view.kind === "projects" && <Projects onNewProject={newProject} />}
         {s.view.kind === "all" && <AllTasks />}
         {s.view.kind === "my" && <MyTasks />}
         {s.view.kind === "people" && <People />}
         {s.view.kind === "project" && (project ? <ProjectView key={project.id} project={project} onEdit={() => setProjectDialog({ project })} /> : <Home onNewProject={newProject} />)}
+        </NewTaskContext.Provider>
       </main>
       {selected && (
         <>

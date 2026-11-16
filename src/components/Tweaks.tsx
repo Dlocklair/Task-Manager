@@ -9,7 +9,6 @@ export interface Tweaks {
   lineHeight: number;
   rowSpacing: number;
   pageWidth: "880" | "1080" | "1280" | "full";
-  actionAlign: "left" | "center" | "right";
   radius: number;
   accent: "blue" | "teal" | "violet" | "graphite";
   textScale: number;
@@ -21,7 +20,6 @@ export const DEFAULT_TWEAKS: Tweaks = {
   lineHeight: 1.45,
   rowSpacing: 11,
   pageWidth: "1080",
-  actionAlign: "right",
   radius: 12,
   accent: "blue",
   textScale: 1,
@@ -44,7 +42,6 @@ const ACCENT: Record<Tweaks["accent"], [string, string, string]> = {
   graphite: ["#2b3446", "#1c2332", "#e8ebf1"],
 };
 const WIDTH: Record<Tweaks["pageWidth"], string> = { "880": "880px", "1080": "1080px", "1280": "1280px", full: "none" };
-const ALIGN: Record<Tweaks["actionAlign"], string> = { left: "flex-start", center: "center", right: "flex-end" };
 
 const KEY = "task-manager-tweaks";
 const ON_KEY = "task-manager-tweaks-on";
@@ -83,7 +80,6 @@ export function applyTweaks(t: Tweaks) {
   root.setProperty("--lh", String(t.lineHeight));
   root.setProperty("--row-y", `${t.rowSpacing}px`);
   root.setProperty("--page-w", WIDTH[t.pageWidth]);
-  root.setProperty("--cta-justify", ALIGN[t.actionAlign]);
   root.setProperty("--r", `${t.radius}px`);
   root.setProperty("--ts", String(t.textScale));
   root.setProperty("--r-lg", `${t.radius + 6}px`);
@@ -188,12 +184,6 @@ export function TweaksPanel() {
         value={t.pageWidth}
         onChange={(v) => set("pageWidth", v)}
         options={[{ id: "880", label: "Narrow" }, { id: "1080", label: "Standard" }, { id: "1280", label: "Wide" }, { id: "full", label: "Full" }]}
-      />
-      <Seg
-        label="New task button"
-        value={t.actionAlign}
-        onChange={(v) => set("actionAlign", v)}
-        options={[{ id: "left", label: "Left" }, { id: "center", label: "Centre" }, { id: "right", label: "Right" }]}
       />
 
       <div className="tweaks-group">
