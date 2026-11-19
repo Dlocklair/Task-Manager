@@ -120,6 +120,12 @@ function Notes({ taskId }: { taskId: string }) {
     if (note) setNotes((n) => [...(n ?? []), note]);
   };
 
+  const edit = (id: string, text: string) => {
+    const now = new Date().toISOString();
+    setNotes((n) => (n ?? []).map((x) => (x.id === id ? { ...x, body: text, updated_at: now } : x)));
+    s.api.update("task_comments", id, { body: text }).catch(() => s.toast("That change to the note was not saved."));
+  };
+
   const remove = (id: string) => {
     setNotes((n) => (n ?? []).filter((x) => x.id !== id));
     s.api.remove("task_comments", id).catch(() => s.toast("That note was not deleted."));
@@ -131,13 +137,7 @@ function Notes({ taskId }: { taskId: string }) {
       {body.trim() && <p className="draft-warning" role="status">This note is not added yet. Press Add note to save it.</p>}
       <div className="notes">
         {(notes ?? []).map((n) => (
-          <div key={n.id} className="note">
-            <RichView text={n.body} />
-            <footer>
-              <time>{new Date(n.created_at).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</time>
-              {n.author_id === s.data.userId && <button onClick={() => remove(n.id)}>Delete</button>}
-            </footer>
-          </div>
+          <NoteItem key={n.id} note={n} mine={n.author_id === s.data.userId} onEdit={(text) => edit(n.id, text)} onDelete={() => remove(n.id)} />
         ))}
       </div>
       <form className="note-form" onSubmit={add}>
@@ -157,5 +157,68 @@ function Notes({ taskId }: { taskId: string }) {
         <button className="btn primary" type="submit" disabled={!body.trim()}>Add note</button>
       </form>
     </section>
+  );
+}
+
+const when = (iso: string) => new Date(iso).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+
+/** One note. Your own notes can be edited in place or deleted. */
+function NoteItem({ note, mine, onEdit, onDelete }: { note: Note; mine: boolean; onEdit(text: string): void; onDelete(): void }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(note.body);
+  const edited = note.updated_at && new Date(note.updated_at).getTime() - new Date(note.created_at).getTime() > 1000;
+
+  const save = () => {
+    const v = draft.trim();
+    if (!v) return;
+    if (v !== note.body.trim()) onEdit(v);
+    setEditing(false);
+  };
+  const cancel = () => {
+    setDraft(note.body);
+    setEditing(false);
+  };
+
+  if (editing) {
+    return (
+      <div className="note is-editing">
+        <RichEditor
+          value={draft}
+          onChange={setDraft}
+          rows={3}
+          autoFocus
+          placeholder="Write a note"
+          ariaLabel="Edit note"
+          onKeyDown={(e) => {
+            if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+              e.preventDefault();
+              save();
+            } else if (e.key === "Escape") {
+              e.stopPropagation();
+              cancel();
+            }
+          }}
+        />
+        <div className="note-edit-actions">
+          <button type="button" className="btn small" onClick={cancel}>Cancel</button>
+          <button type="button" className="btn small primary" disabled={!draft.trim()} onClick={save}>Save note</button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="note">
+      <RichView text={note.body} />
+      <footer>
+        <time>{when(note.created_at)}{edited && <span title={`Edited ${when(note.updated_at!)}`}> · edited</span>}</time>
+        {mine && (
+          <span className="note-actions">
+            <button onClick={() => { setDraft(note.body); setEditing(true); }}>Edit</button>
+            <button className="danger" onClick={() => window.confirm("Delete this note?") && onDelete()}>Delete</button>
+          </span>
+        )}
+      </footer>
+    </div>
   );
 }

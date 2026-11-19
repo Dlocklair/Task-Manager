@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { ChevronDown, Pencil, Trash2, X } from "lucide-react";
 import { useStore } from "../lib/store";
+import { DuePicker } from "./DuePicker";
 import { CONTEXTS, PRIORITIES, STATUSES } from "../lib/util";
 import type { Priority, Status, TaskContext } from "../lib/types";
 
@@ -72,10 +73,10 @@ export function BulkBar() {
         </select>
       </label>
 
-      <label className="bulk-field">
+      <div className="bulk-field">
         <span>Due</span>
-        <input type="date" value="" onChange={(e) => e.target.value && s.bulkUpdate(ids, { due_date: e.target.value })} />
-      </label>
+        <DuePicker dark clearable={false} value={null} label="Set due date for selected" onChange={(v) => v && s.bulkUpdate(ids, { due_date: v })} />
+      </div>
       <button className="btn small" onClick={() => s.bulkUpdate(ids, { due_date: null })}>Clear due date</button>
 
       <label className="bulk-field">

@@ -745,3 +745,51 @@ body.has-bulk .main { padding-bottom: 96px; }
 .my-sort { justify-content: flex-start; gap: 14px; margin-top: 4px; }
 .my-sort label { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; color: var(--ink-2); font-weight: 500; }
 .my-sort select { min-width: 170px; }
+
+/* ---------- Quick due date: Today / Tomorrow / Pick date ---------- */
+.due-picker { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.chip-btn { padding: 5px 11px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--ink-2); font-size: 13px; font-weight: 600; line-height: 1.3; white-space: nowrap; }
+.chip-btn:hover { border-color: var(--primary); color: var(--primary); }
+.chip-btn.on { background: var(--primary); border-color: var(--primary); color: #fff; }
+.due-picker input[type="date"] { width: auto; padding: 4px 8px; font-size: 13px; border-radius: 999px; }
+.due-picker input[type="date"].on { border-color: var(--primary); box-shadow: 0 0 0 1px var(--primary); color: var(--primary); font-weight: 600; }
+.chip-clear { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; color: var(--ink-3); }
+.chip-clear:hover { background: #e6eaf3; color: var(--late); }
+.due-picker.dark .chip-btn { background: transparent; border-color: rgb(255 255 255 / 0.35); color: #fff; }
+.due-picker.dark .chip-btn:hover { border-color: #fff; }
+.due-picker.dark input[type="date"] { background: #fff; color: var(--ink); }
+
+/* ---------- Task panel: grouped, condensed fields ---------- */
+.task-fields { display: flex; flex-direction: column; gap: 10px; margin-top: 14px; }
+.task-fields .status-line { display: flex; align-items: center; gap: 10px; }
+.task-fields .status-line .seg { width: 100%; display: flex; }
+.task-fields .status-line .seg button { flex: 1; justify-content: center; padding: 5px 8px; font-size: 13px; }
+.task-fields .status-line > label { color: var(--ink-2); font-size: 13px; font-weight: 600; }
+.task-fields .status-line select { width: auto; flex: 1; }
+.field-card { background: #f3f6fb; border: 1px solid #e3e8f2; border-radius: var(--r-sm); padding: 8px 12px 10px; display: flex; flex-direction: column; gap: 8px; }
+.field-card h4 { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-3); }
+.field-card h4 .due { text-transform: none; letter-spacing: 0; }
+.field-line { display: grid; grid-template-columns: 64px minmax(0, 1fr); align-items: center; gap: 8px; }
+.field-label { color: var(--ink-2); font-size: 13px; font-weight: 500; }
+.field-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.field-pair label { display: flex; flex-direction: column; gap: 4px; }
+.field-card select { padding-top: 6px; padding-bottom: 6px; font-size: 13.5px; background-color: var(--surface); }
+.field-card .field-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.field-card input.due-time { width: auto; padding: 4px 8px; font-size: 13px; }
+.field-card .reminder { display: flex; flex-direction: column; gap: 4px; }
+.field-card .reminder .check-line { font-size: 13px; font-weight: 500; }
+.field-card .field-hint { margin: 0; }
+.task-fields.compact .field-card { background: var(--surface); }
+@media (max-width: 420px) { .field-pair { grid-template-columns: 1fr; } .field-line { grid-template-columns: 1fr; gap: 4px; } }
+
+/* ---------- Notes: edit in place ---------- */
+.note .note-actions { display: inline-flex; gap: 12px; }
+.note footer button:hover { color: var(--primary); }
+.note footer button.danger:hover { color: var(--late); }
+.note.is-editing { background: var(--surface); border-left-color: var(--primary); padding: 8px; display: flex; flex-direction: column; gap: 8px; }
+.note.is-editing .rt-editor { width: 100%; }
+.note-edit-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.task-fields .due-picker input[type="date"], .detail .task-fields .field-row .due-picker input[type="date"] { width: 132px; flex: none; }
+.detail .task-fields .field-row input.due-time { width: 108px; flex: none; }
+.field-line { align-items: start; }
+.field-line > .field-label { padding-top: 6px; }

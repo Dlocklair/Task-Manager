@@ -65,6 +65,8 @@ export interface Note {
   author_id: string;
   body: string;
   created_at: string;
+  /** Set when the note was changed after it was first added. */
+  updated_at?: string;
 }
 
 /** How a task list is filtered, sorted and grouped. Saved filters store one of these. */
