@@ -3,7 +3,7 @@ import { ChevronDown, Pencil, Trash2, X } from "lucide-react";
 import { useStore } from "../lib/store";
 import { DuePicker } from "./DuePicker";
 import { CONTEXTS, PRIORITIES, STATUSES } from "../lib/util";
-import type { Priority, Status, TaskContext } from "../lib/types";
+import type { Priority, Status, Task, TaskContext } from "../lib/types";
 
 /**
  * Appears when tasks are selected. It starts as a slim bar so the list stays clear and you can keep picking
@@ -15,6 +15,7 @@ export function BulkBar() {
   const [person, setPerson] = useState("");
   const [days, setDays] = useState("");
   const [hours, setHours] = useState("");
+  const [parentId, setParentId] = useState("");
   const [open, setOpen] = useState(false);
   const any = ids.length > 0;
 
@@ -86,6 +87,26 @@ export function BulkBar() {
           {s.data.projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
         </select>
       </label>
+
+      <div className="bulk-field wide">
+        <span>Make subtask of…</span>
+        <div className="bulk-inline">
+          <select value={parentId} onChange={(e) => setParentId(e.target.value)} aria-label="Parent task">
+            <option value="">Choose a task…</option>
+            {s.data.tasks
+              .filter((t: Task) => !t.parent_task_id && !ids.includes(t.id))
+              .map((t: Task) => {
+                const proj = s.project(t.project_id);
+                return <option key={t.id} value={t.id}>{proj ? `${proj.name} → ` : ""}{t.title}</option>;
+              })}
+          </select>
+          <button
+            className="btn small"
+            disabled={!parentId}
+            onClick={() => { if (parentId) { s.bulkReparent(ids, parentId); setParentId(""); } }}
+          >Move</button>
+        </div>
+      </div>
 
       <div className="bulk-field wide">
         <span>Assigned to</span>

@@ -1,3 +1,4 @@
+import { X } from "lucide-react";
 import { useStore } from "../lib/store";
 import type { Priority, Task, TaskContext } from "../lib/types";
 import { CONTEXTS, PRIORITIES, STATUSES, step } from "../lib/util";
@@ -47,18 +48,31 @@ export function TaskFields({ task, compact = false }: { task: Task; compact?: bo
           <span className="field-label">Due</span>
           <div className="field-row">
             <DuePicker value={task.due_date} onChange={(v) => s.updateTask(task.id, { due_date: v })} />
-            {task.due_date && (
+          </div>
+        </div>
+        {task.due_date && (
+          <div className="field-line">
+            <span className="field-label">Time</span>
+            <div className="field-row time-row">
               <input
                 type="time"
-                className="due-time"
+                className={"due-time" + (task.due_time ? " on" : "")}
                 aria-label="Due time"
-                title="Due time. Leave blank for 9:00 AM."
+                title="Due time. Leave blank for no specific time."
                 value={task.due_time?.slice(0, 5) ?? ""}
                 onChange={(e) => s.updateTask(task.id, { due_time: e.target.value || null })}
               />
-            )}
+              {task.due_time && (
+                <button
+                  className="icon-btn chip-clear"
+                  aria-label="Clear time"
+                  title="Clear time"
+                  onClick={() => s.updateTask(task.id, { due_time: null })}
+                ><X size={13} /></button>
+              )}
+            </div>
           </div>
-        </div>
+        )}
         <div className="field-line">
           <span className="field-label">Remind</span>
           <ReminderField task={task} />

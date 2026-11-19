@@ -12,7 +12,7 @@ interface NewTask {
   assignMe?: boolean;
 }
 
-type TaskPatch = Partial<Pick<Task, "title" | "description" | "status" | "priority" | "context" | "due_date" | "due_time" | "remind_before_minutes" | "project_id" | "position">>;
+type TaskPatch = Partial<Pick<Task, "title" | "description" | "status" | "priority" | "context" | "due_date" | "due_time" | "remind_before_minutes" | "project_id" | "position" | "parent_task_id">>;
 
 export interface Store {
   api: Api;
@@ -44,6 +44,8 @@ export interface Store {
   bulkUpdate(ids: string[], patch: Partial<Pick<Task, "status" | "priority" | "context" | "due_date" | "due_time" | "remind_before_minutes" | "project_id">>): void;
   bulkAssign(ids: string[], personId: string, on: boolean): void;
   bulkDelete(ids: string[]): void;
+  /** Move the selected tasks to become subtasks of parentId. */
+  bulkReparent(ids: string[], parentId: string): void;
 
   project(id: string): Project | undefined;
   task(id: string): Task | undefined;
@@ -309,6 +311,23 @@ export function StoreProvider({ api, children }: { api: Api; children: ReactNode
         });
         setSelection(new Set());
         ids.forEach((id) => save(api.remove("tasks", id)));
+      },
+      bulkReparent: (ids, parentId) => {
+        const parent = tasks.get(parentId);
+        if (!parent) return;
+        // Filter out the parent itself and any existing subtasks of itself to avoid cycles.
+        const safe = ids.filter((id) => id !== parentId && tasks.get(id)?.parent_task_id !== parentId);
+        if (!safe.length) return;
+        mut((d) => ({
+          ...d,
+          tasks: d.tasks.map((t) =>
+            safe.includes(t.id) ? { ...t, parent_task_id: parentId, project_id: parent.project_id } : t
+          ),
+        }));
+        setSelection(new Set());
+        safe.forEach((id) =>
+          save(api.update("tasks", id, { parent_task_id: parentId, project_id: parent.project_id }))
+        );
       },
 
       project: (id) => data.projects.find((p) => p.id === id),
