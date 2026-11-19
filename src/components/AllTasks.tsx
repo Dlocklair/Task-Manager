@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useStore } from "../lib/store";
-import { ALL_BASE, applyFilters, groupTasks, NO_SEARCH, type TextSearch } from "../lib/listing";
+import { ALL_BASE, applyFilters, groupTasks, NO_SEARCH, rememberSort, reorderMode, withSavedSort, type TextSearch } from "../lib/listing";
 import type { GroupKey, ListConfig } from "../lib/types";
 import { ListTools } from "./ListTools";
 import { SearchBox } from "./SearchBox";
@@ -13,7 +13,7 @@ const ALL_GROUPS: GroupKey[] = ["status", "assigned", "priority", "due", "projec
 /** Every open or finished task across all projects. Subtasks sit under their parent. */
 export function AllTasks() {
   const s = useStore();
-  const [cfg, setCfg] = useState<ListConfig>(ALL_BASE);
+  const [cfg, setCfg] = useState<ListConfig>(() => withSavedSort(ALL_BASE, "all"));
   const [search, setSearch] = useState<TextSearch>(NO_SEARCH);
   const roots = s.data.tasks.filter((t) => !t.parent_task_id);
   const ctx = { people: s.data.people, projects: s.data.projects, assigned: (id: string) => s.assigned(id) };
@@ -41,7 +41,7 @@ export function AllTasks() {
       </header>
 
       {roots.length > 0 && (
-        <ListTools scope="all" cfg={cfg} base={ALL_BASE} onChange={setCfg} search={search} onSearch={setSearch} groups={ALL_GROUPS} showProject showSearch={false} shown={tasks.length} total={roots.length} />
+        <ListTools scope="all" cfg={cfg} base={ALL_BASE} onChange={(c) => { rememberSort("all", c.sortBy); setCfg(c); }} search={search} onSearch={setSearch} groups={ALL_GROUPS} showProject showSearch={false} shown={tasks.length} total={roots.length} />
       )}
 
       {roots.length === 0 ? (
@@ -49,7 +49,7 @@ export function AllTasks() {
       ) : tasks.length === 0 ? (
         <Empty title="No tasks match">Clear the search or filters above to see more.</Empty>
       ) : (
-        <TaskSections sections={sections} groupBy={cfg.groupBy} showProject={cfg.groupBy !== "project"} openDone={search.includeClosed && search.q.trim().length > 0} reorderable={cfg.sortBy === "priority"} />
+        <TaskSections sections={sections} groupBy={cfg.groupBy} showProject={cfg.groupBy !== "project"} openDone={search.includeClosed && search.q.trim().length > 0} reorderable={reorderMode(cfg.sortBy)} />
       )}
     </div>
   );

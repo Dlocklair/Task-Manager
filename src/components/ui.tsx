@@ -54,7 +54,7 @@ export function DueBadge({ task }: { task: Task }) {
 }
 
 export function PriorityFlag({ priority, withLabel }: { priority: Priority; withLabel?: boolean }) {
-  if (priority === "none" || (priority === "low" && !withLabel)) return null;
+  if (priority === "none") return null;
   const label = PRIORITIES.find((p) => p.id === priority)!.label;
   return (
     <span className={`prio ${priority}`} title={`${label} priority`}>

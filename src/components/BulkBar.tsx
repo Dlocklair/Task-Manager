@@ -1,17 +1,30 @@
-import { useState } from "react";
-import { X } from "lucide-react";
+import { useEffect, useState } from "react";
+import { ChevronDown, Pencil, Trash2, X } from "lucide-react";
 import { useStore } from "../lib/store";
 import { CONTEXTS, PRIORITIES, STATUSES } from "../lib/util";
 import type { Priority, Status, TaskContext } from "../lib/types";
 
-/** Appears when tasks are selected. Each control applies to every selected task at once. */
+/**
+ * Appears when tasks are selected. It starts as a slim bar so the list stays clear and you can keep picking
+ * tasks. "Edit selected" opens the options; each one applies to every selected task at once.
+ */
 export function BulkBar() {
   const s = useStore();
   const ids = [...s.selection].filter((id) => s.task(id));
   const [person, setPerson] = useState("");
   const [days, setDays] = useState("");
   const [hours, setHours] = useState("");
-  if (ids.length === 0) return null;
+  const [open, setOpen] = useState(false);
+  const any = ids.length > 0;
+
+  // Close the options when nothing is selected, and leave room under the list so the bar never hides a row.
+  useEffect(() => {
+    if (!any) setOpen(false);
+    document.body.classList.toggle("has-bulk", any);
+    return () => document.body.classList.remove("has-bulk");
+  }, [any]);
+
+  if (!any) return null;
 
   const withDue = ids.filter((id) => s.task(id)?.due_date);
   const confirmDelete = () => {
@@ -23,11 +36,17 @@ export function BulkBar() {
   const who = s.data.people.find((p) => p.id === person);
 
   return (
-    <div className="bulk-dock" role="region" aria-label="Selected tasks">
+    <div className={"bulk-dock" + (open ? " is-open" : "")} role="region" aria-label="Selected tasks">
       <div className="bulk-count">
         <strong>{ids.length} selected</strong>
+        <button className="btn small bulk-edit" aria-expanded={open} onClick={() => setOpen(!open)}>
+          {open ? <><ChevronDown size={15} />Hide options</> : <><Pencil size={14} />Edit selected</>}
+        </button>
+        {!open && <button className="btn small danger-solid" onClick={confirmDelete}><Trash2 size={14} />Delete</button>}
         <button className="icon-btn on-dark" onClick={() => s.clearSelection()} aria-label="Clear selection"><X size={16} /></button>
       </div>
+
+      {open && <div className="bulk-options">
 
       <label className="bulk-field">
         <span>Status</span>
@@ -99,7 +118,8 @@ export function BulkBar() {
         {withDue.length < ids.length && <small className="bulk-note">Only the {withDue.length} with a due date will get a reminder.</small>}
       </div>
 
-      <button className="btn small danger-solid" onClick={confirmDelete}>Delete</button>
+      <button className="btn small danger-solid" onClick={confirmDelete}><Trash2 size={14} />Delete</button>
+      </div>}
     </div>
   );
 }

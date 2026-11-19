@@ -1,9 +1,10 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Check as CheckIcon, Mail, Pencil, Plus, Tags, Trash2 } from "lucide-react";
 import { useStore } from "../lib/store";
-import type { Person, Task } from "../lib/types";
-import { addDays, byUrgency, COLORS, firstName, greeting, isoDay, tint } from "../lib/util";
-import { NO_SEARCH, searchTasks, type TextSearch } from "../lib/listing";
+import type { Person, SortKey, Task } from "../lib/types";
+import type { ReorderScope } from "../lib/drag";
+import { addDays, byUrgency, COLORS, firstName, greeting, isoDay, sortCompare, tint } from "../lib/util";
+import { NO_SEARCH, rememberSort, reorderMode, savedSort, searchTasks, SORT_OPTIONS, type TextSearch } from "../lib/listing";
 import { CategoryDialog } from "./Shell";
 import { mailtoLink } from "../lib/mail";
 import { TaskRow } from "./TaskList";
@@ -13,9 +14,9 @@ import { groupProjects } from "../lib/categories";
 import { PeoplePicks } from "./PeoplePicks";
 import { Avatar, Empty, Modal, Swatches } from "./ui";
 
-function buckets(tasks: Task[]) {
+function buckets(tasks: Task[], order: (a: Task, b: Task) => number = byUrgency) {
   const today = isoDay(), week = addDays(7);
-  const open = tasks.filter((t) => t.status !== "done").sort(byUrgency);
+  const open = tasks.filter((t) => t.status !== "done").sort(order);
   return {
     late: open.filter((t) => t.due_date && t.due_date < today),
     today: open.filter((t) => t.due_date === today),
@@ -25,12 +26,14 @@ function buckets(tasks: Task[]) {
   };
 }
 
-function Section({ title, tone, tasks }: { title: string; tone?: string; tasks: Task[] }) {
+function Section({ title, tone, tasks, mode = null }: { title: string; tone?: string; tasks: Task[]; mode?: ReorderScope["mode"] | null }) {
   if (!tasks.length) return null;
+  // Each due-date section is its own group: tasks can be dragged within it, not into another one.
+  const reorder: ReorderScope | undefined = mode ? { list: tasks, mode } : undefined;
   return (
     <section className="group">
       <h2 className={`group-head ${tone ?? ""}`}><i />{title}<span>{tasks.length}</span></h2>
-      <div className="rows">{tasks.map((t) => <TaskRow key={t.id} task={t} showProject />)}</div>
+      <div className="rows">{tasks.map((t) => <TaskRow key={t.id} task={t} showProject reorder={reorder} />)}</div>
     </section>
   );
 }
@@ -154,8 +157,10 @@ export function Projects({ onNewProject }: { onNewProject(): void }) {
 export function MyTasks() {
   const s = useStore();
   const [search, setSearch] = useState<TextSearch>(NO_SEARCH);
+  const [sortBy, setSortBy] = useState<SortKey>(() => savedSort("my") ?? "due");
   const mine = s.me ? s.tasksFor(s.me.id) : [];
-  const b = buckets(mine);
+  const b = buckets(mine, sortCompare(sortBy, () => ""));
+  const mode = reorderMode(sortBy);
   const open = mine.filter((t) => t.status !== "done").length;
   const q = search.q.trim();
   const found = q ? searchTasks(mine, search).sort(byUrgency) : [];
@@ -176,6 +181,22 @@ export function MyTasks() {
             placeholder="Search my tasks"
           />
         </div>
+        <div className="page-head-row my-sort">
+          <label>
+            <span>Sort by</span>
+            <select
+              value={sortBy}
+              onChange={(e) => {
+                const v = e.target.value as SortKey;
+                rememberSort("my", v);
+                setSortBy(v);
+              }}
+            >
+              {SORT_OPTIONS.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
+            </select>
+          </label>
+          {mode && <span className="field-hint">Drag the <b>⋮⋮</b> handle to move a task within its section.</span>}
+        </div>
       </header>
       {q ? (
         found.length ? (
@@ -190,11 +211,11 @@ export function MyTasks() {
         <Empty title="You're all caught up">Tasks appear here when you assign them to yourself.</Empty>
       ) : (
         <>
-          <Section title="Overdue" tone="late" tasks={b.late} />
-          <Section title="Today" tone="today" tasks={b.today} />
-          <Section title="Next 7 days" tone="week" tasks={b.week} />
-          <Section title="Later" tasks={b.later} />
-          <Section title="No due date" tasks={b.undated} />
+          <Section title="Overdue" tone="late" tasks={b.late} mode={mode} />
+          <Section title="Today" tone="today" tasks={b.today} mode={mode} />
+          <Section title="Next 7 days" tone="week" tasks={b.week} mode={mode} />
+          <Section title="Later" tasks={b.later} mode={mode} />
+          <Section title="No due date" tasks={b.undated} mode={mode} />
         </>
       )}
     </div>

@@ -9,12 +9,13 @@ export const STATUSES: { id: Status; label: string }[] = [
   { id: "done", label: "Done" },
 ];
 
-export const PRIORITIES: { id: Priority; label: string }[] = [
-  { id: "none", label: "No priority" },
-  { id: "low", label: "Low" },
-  { id: "medium", label: "Medium" },
-  { id: "high", label: "High" },
-  { id: "urgent", label: "Urgent" },
+/** Flag colours: urgent pink, high red, medium yellow, low green. */
+export const PRIORITIES: { id: Priority; label: string; color: string }[] = [
+  { id: "none", label: "No priority", color: "#94A3B8" },
+  { id: "low", label: "Low", color: "#16A34A" },
+  { id: "medium", label: "Medium", color: "#E0A800" },
+  { id: "high", label: "High", color: "#DC2626" },
+  { id: "urgent", label: "Urgent", color: "#DB2777" },
 ];
 
 /** Where or how a task can be done. Filter by these when you are away from your computer. */
@@ -119,7 +120,7 @@ export function reminderMoment(task: { due_date: string | null; due_time: string
 }
 
 /** Sort order for a project's tasks. "assignedName" returns the first assignee's name for a task. */
-export function sortCompare(key: "due" | "priority" | "assigned" | "name", assignedName: (taskId: string) => string): (a: Task, b: Task) => number {
+export function sortCompare(key: "due" | "priority" | "assigned" | "manual", assignedName: (taskId: string) => string): (a: Task, b: Task) => number {
   switch (key) {
     case "priority":
       // Priority first, then the order you dragged tasks into.
@@ -130,8 +131,9 @@ export function sortCompare(key: "due" | "priority" | "assigned" | "name", assig
         if (an !== bn) return an === "" ? 1 : bn === "" ? -1 : an.localeCompare(bn);
         return byUrgency(a, b);
       };
-    case "name":
-      return (a, b) => a.title.localeCompare(b.title);
+    case "manual":
+      // Exactly the order you dragged tasks into.
+      return (a, b) => a.position - b.position;
     default:
       return byUrgency;
   }

@@ -68,7 +68,7 @@ export interface Note {
 }
 
 /** How a task list is filtered, sorted and grouped. Saved filters store one of these. */
-export type SortKey = "due" | "priority" | "name";
+export type SortKey = "due" | "priority" | "manual";
 export type GroupKey = "status" | "assigned" | "priority" | "due" | "project" | "none";
 
 export type ListConfig = {

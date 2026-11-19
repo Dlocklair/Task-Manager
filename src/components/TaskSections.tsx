@@ -2,6 +2,7 @@ import { useState } from "react";
 import { ChevronDown } from "lucide-react";
 import type { Section } from "../lib/listing";
 import type { GroupKey } from "../lib/types";
+import type { ReorderMode, ReorderScope } from "../lib/drag";
 import { TaskRow } from "./TaskList";
 
 /** Heading colour classes. The status groups and the Overdue and Today due buckets use these. */
@@ -9,17 +10,18 @@ const TONE: Record<string, string> = { in_progress: "in_progress", todo: "", don
 
 /** openDone shows the Done section open, used while searching closed tasks so matches are visible. */
 /**
- * reorderable turns on drag-and-drop ordering. Each row sees its own section, so a drop lands
- * between neighbours in that section, and a drop onto another priority changes the task's priority.
+ * reorderable turns on drag-and-drop ordering. Each row only knows its own section, so a task can be
+ * dragged within its group and nowhere else. The Done section is ordered by finish date, so it is not draggable.
  */
-export function TaskSections({ sections, groupBy, showProject = false, openDone = false, reorderable = false }: { sections: Section[]; groupBy: GroupKey; showProject?: boolean; openDone?: boolean; reorderable?: boolean }) {
+export function TaskSections({ sections, groupBy, showProject = false, openDone = false, reorderable = null }: { sections: Section[]; groupBy: GroupKey; showProject?: boolean; openDone?: boolean; reorderable?: ReorderMode | null }) {
   const [toggled, setToggled] = useState(false);
   const showDone = openDone || toggled;
 
   if (sections.length === 0) return null;
+  const scope = (list: Section["tasks"]): ReorderScope | undefined => (reorderable ? { list, mode: reorderable } : undefined);
 
   if (groupBy === "none") {
-    return <div className="rows">{sections[0].tasks.map((t) => <TaskRow key={t.id} task={t} showProject={showProject} reorder={reorderable ? sections[0].tasks : undefined} />)}</div>;
+    return <div className="rows">{sections[0].tasks.map((t) => <TaskRow key={t.id} task={t} showProject={showProject} reorder={scope(sections[0].tasks)} />)}</div>;
   }
 
   return (
@@ -33,7 +35,7 @@ export function TaskSections({ sections, groupBy, showProject = false, openDone 
               <button className="group-head done as-button" aria-expanded={showDone} onClick={() => setToggled(!toggled)}>
                 <i />{sec.title}{count}<ChevronDown size={16} className={showDone ? "flip" : ""} />
               </button>
-              {showDone && <div className="rows">{sec.tasks.map((t) => <TaskRow key={t.id} task={t} showProject={showProject} reorder={reorderable ? sec.tasks : undefined} />)}</div>}
+              {showDone && <div className="rows">{sec.tasks.map((t) => <TaskRow key={t.id} task={t} showProject={showProject} />)}</div>}
             </section>
           );
         }
@@ -44,7 +46,7 @@ export function TaskSections({ sections, groupBy, showProject = false, openDone 
               {sec.title}
               {count}
             </h2>
-            <div className="rows">{sec.tasks.map((t) => <TaskRow key={t.id} task={t} showProject={showProject} reorder={reorderable ? sec.tasks : undefined} />)}</div>
+            <div className="rows">{sec.tasks.map((t) => <TaskRow key={t.id} task={t} showProject={showProject} reorder={scope(sec.tasks)} />)}</div>
           </section>
         );
       })}

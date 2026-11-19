@@ -164,6 +164,8 @@ export function StoreProvider({ api, children }: { api: Api; children: ReactNode
       if (list) list.push(t);
       else map.set(k, [t]);
     }
+    // Subtasks always show in the order you dragged them into.
+    byParent.forEach((list) => list.sort((a, b) => a.position - b.position));
     const people = new Map(data.people.map((p) => [p.id, p]));
     const tasks = new Map(data.tasks.map((t) => [t.id, t]));
     const me = data.people.find((p) => p.user_id === data.userId);
