@@ -775,7 +775,8 @@ body.has-bulk .main { padding-bottom: 96px; }
 .field-pair label { display: flex; flex-direction: column; gap: 4px; }
 .field-card select { padding-top: 6px; padding-bottom: 6px; font-size: 13.5px; background-color: var(--surface); }
 .field-card .field-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.field-card input.due-time { width: auto; padding: 4px 8px; font-size: 13px; }
+.field-card input.due-time { width: 120px; padding: 4px 8px; font-size: 13px; }
+.time-row { align-items: center; gap: 6px; }
 .field-card .reminder { display: flex; flex-direction: column; gap: 4px; }
 .field-card .reminder .check-line { font-size: 13px; font-weight: 500; }
 .field-card .field-hint { margin: 0; }
