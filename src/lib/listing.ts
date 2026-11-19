@@ -1,4 +1,5 @@
 import type { GroupKey, ListConfig, Person, Priority, Project, SortKey, Task } from "./types";
+import type { ReorderMode } from "./drag";
 import { addDays, CONTEXTS, isoDay, PRIORITIES, sortCompare, STATUSES, step } from "./util";
 
 export const DEFAULT_CONFIG: ListConfig = {
@@ -19,7 +20,13 @@ export const SORT_OPTIONS: { id: SortKey; label: string }[] = [
   { id: "due", label: "Due date" },
   { id: "priority", label: "Priority" },
   { id: "name", label: "Name" },
+  { id: "manual", label: "My order (drag)" },
 ];
+
+/** Dragging is on when sorted by priority or by your own order. It changes nothing in other sorts. */
+export function reorderMode(sortBy: SortKey): ReorderMode | null {
+  return sortBy === "priority" ? "priority" : sortBy === "manual" ? "manual" : null;
+}
 
 export const GROUP_OPTIONS: { id: GroupKey; label: string }[] = [
   { id: "status", label: "Status" },

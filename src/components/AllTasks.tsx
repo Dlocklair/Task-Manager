@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useStore } from "../lib/store";
-import { ALL_BASE, applyFilters, groupTasks, NO_SEARCH, type TextSearch } from "../lib/listing";
+import { ALL_BASE, applyFilters, groupTasks, NO_SEARCH, reorderMode, type TextSearch } from "../lib/listing";
 import type { GroupKey, ListConfig } from "../lib/types";
 import { ListTools } from "./ListTools";
 import { SearchBox } from "./SearchBox";
@@ -49,7 +49,7 @@ export function AllTasks() {
       ) : tasks.length === 0 ? (
         <Empty title="No tasks match">Clear the search or filters above to see more.</Empty>
       ) : (
-        <TaskSections sections={sections} groupBy={cfg.groupBy} showProject={cfg.groupBy !== "project"} openDone={search.includeClosed && search.q.trim().length > 0} reorderable={cfg.sortBy === "priority"} />
+        <TaskSections sections={sections} groupBy={cfg.groupBy} showProject={cfg.groupBy !== "project"} openDone={search.includeClosed && search.q.trim().length > 0} reorderable={reorderMode(cfg.sortBy)} />
       )}
     </div>
   );

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Columns3, LayoutList, Mail, Pencil } from "lucide-react";
 import { useStore } from "../lib/store";
-import { applyFilters, DEFAULT_CONFIG, groupTasks, NO_SEARCH, type TextSearch } from "../lib/listing";
+import { applyFilters, DEFAULT_CONFIG, groupTasks, NO_SEARCH, reorderMode, type TextSearch } from "../lib/listing";
 import type { GroupKey, ListConfig, Project, Task } from "../lib/types";
 import { sortCompare, STATUSES, step, tint } from "../lib/util";
 import { QuickAdd } from "./TaskList";
@@ -100,7 +100,7 @@ export function ProjectView({ project, onEdit }: { project: Project; onEdit(): v
       ) : tasks.length === 0 ? (
         <Empty title="No tasks match">Clear the search or filters above to see more.</Empty>
       ) : mode === "list" ? (
-        <TaskSections sections={sections} groupBy={cfg.groupBy} openDone={search.includeClosed && search.q.trim().length > 0} reorderable={cfg.sortBy === "priority"} />
+        <TaskSections sections={sections} groupBy={cfg.groupBy} openDone={search.includeClosed && search.q.trim().length > 0} reorderable={reorderMode(cfg.sortBy)} />
       ) : (
         <Board groups={board} projectId={project.id} />
       )}
@@ -152,8 +152,8 @@ function Card({ task }: { task: Task }) {
       className={"card" + (done ? " is-done" : "") + (s.selectedId === task.id ? " is-selected" : "") + (picked ? " is-picked" : "")}
       draggable
       onDragStart={(e) => e.dataTransfer.setData("text/task", task.id)}
-      onClick={() => s.openTask(task.id)}
-      onKeyDown={(e) => e.key === "Enter" && s.openTask(task.id)}
+      onClick={() => (s.selecting ? s.toggleSelect(task.id) : s.openTask(task.id))}
+      onKeyDown={(e) => e.key === "Enter" && (s.selecting ? s.toggleSelect(task.id) : s.openTask(task.id))}
       tabIndex={0}
     >
       <div className="card-top">

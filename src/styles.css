@@ -449,7 +449,13 @@ input[type="checkbox"] { width: 17px; height: 17px; accent-color: var(--primary)
 .pick-tick { width: 18px; height: 18px; flex: none; accent-color: var(--primary); cursor: pointer; margin: 0; }
 .row.is-picked, .card.is-picked { box-shadow: inset 3px 0 0 var(--primary); background: var(--primary-soft); }
 .bulk-dock { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); z-index: 40; width: min(980px, calc(100vw - 32px)); max-height: 60vh; overflow-y: auto; display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px 14px; background: var(--navy); color: #fff; border-radius: var(--r); padding: 14px 16px; box-shadow: 0 18px 40px rgb(22 28 46 / 0.35); }
-.bulk-count { display: flex; align-items: center; gap: 6px; width: 100%; }
+.bulk-count { display: flex; align-items: center; gap: 8px; width: 100%; }
+.bulk-options { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px 14px; width: 100%; padding-top: 4px; }
+.bulk-dock:not(.is-open) { width: auto; min-width: min(420px, calc(100vw - 32px)); padding: 10px 14px; }
+.bulk-dock .btn.small.bulk-edit { background: var(--primary); }
+.bulk-dock .btn.small.danger-solid { background: var(--late); }
+.bulk-count .btn.small { align-self: center; }
+body.has-bulk .main { padding-bottom: 96px; }
 .bulk-count strong { font-size: 15px; flex: 1; }
 .icon-btn.on-dark { color: #fff; }
 .bulk-field { display: flex; flex-direction: column; gap: 5px; font-size: 12px; color: #b9c2da; font-weight: 600; }
@@ -715,3 +721,24 @@ input[type="checkbox"] { width: 17px; height: 17px; accent-color: var(--primary)
 .row.drop-before { box-shadow: inset 0 2px 0 var(--primary); }
 .row.drop-after { box-shadow: inset 0 -2px 0 var(--primary); }
 .rows > .row[draggable="true"] { cursor: grab; }
+
+/* ---------- Subtasks: compact line, expandable, draggable ---------- */
+.subtask { display: block; padding: 0; }
+.subtask-head { display: flex; align-items: center; gap: 8px; padding: 7px 0; }
+.subtask .grip { display: inline-flex; color: var(--ink-3); cursor: grab; flex: none; margin-left: -4px; touch-action: none; }
+.subtask-head:hover .grip { color: var(--ink-2); }
+.subtask-title { text-align: left; min-width: 0; overflow-wrap: anywhere; }
+.subtask-meta { display: flex; align-items: center; gap: 8px; flex: none; }
+.subtask .caret { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 6px; color: var(--ink-2); }
+.subtask .caret:hover { background: #e6eaf3; }
+.subtask .caret svg { transition: transform 0.15s; }
+.subtask .caret.open svg { transform: rotate(90deg); }
+.subtask.drop-before { box-shadow: inset 0 2px 0 var(--primary); }
+.subtask.drop-after { box-shadow: inset 0 -2px 0 var(--primary); }
+.subtask-more { background: #f6f8fc; border: 1px solid var(--line); border-radius: var(--r-sm); padding: 4px 14px 12px; margin: 0 0 8px 28px; display: flex; flex-direction: column; gap: 12px; }
+.subtask-more .fields { margin-top: 12px; grid-template-columns: 84px minmax(0, 1fr); }
+.subtask-details { display: flex; flex-direction: column; gap: 6px; }
+.subtask-details > span { color: var(--ink-2); font-size: 13px; font-weight: 500; }
+.subtask-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.subtask-actions .btn svg { margin-right: 4px; vertical-align: -2px; }
+@media (max-width: 760px) { .subtask-meta { display: none; } .subtask-more { margin-left: 0; } }

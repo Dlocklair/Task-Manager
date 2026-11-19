@@ -119,7 +119,7 @@ export function reminderMoment(task: { due_date: string | null; due_time: string
 }
 
 /** Sort order for a project's tasks. "assignedName" returns the first assignee's name for a task. */
-export function sortCompare(key: "due" | "priority" | "assigned" | "name", assignedName: (taskId: string) => string): (a: Task, b: Task) => number {
+export function sortCompare(key: "due" | "priority" | "assigned" | "name" | "manual", assignedName: (taskId: string) => string): (a: Task, b: Task) => number {
   switch (key) {
     case "priority":
       // Priority first, then the order you dragged tasks into.
@@ -132,6 +132,9 @@ export function sortCompare(key: "due" | "priority" | "assigned" | "name", assig
       };
     case "name":
       return (a, b) => a.title.localeCompare(b.title);
+    case "manual":
+      // Exactly the order you dragged tasks into.
+      return (a, b) => a.position - b.position;
     default:
       return byUrgency;
   }
