@@ -19,7 +19,6 @@ export const ALL_BASE: ListConfig = { ...DEFAULT_CONFIG, groupBy: "project" };
 export const SORT_OPTIONS: { id: SortKey; label: string }[] = [
   { id: "due", label: "Due date" },
   { id: "priority", label: "Priority" },
-  { id: "name", label: "Name" },
   { id: "manual", label: "My order (drag)" },
 ];
 
@@ -144,8 +143,8 @@ export function groupTasks(tasks: Task[], cfg: ListConfig, ctx: ListContext): Se
 
     case "priority":
       for (const id of PRIORITY_ORDER) {
-        const label = PRIORITIES.find((x) => x.id === id)!.label;
-        out.push(build(id, label, sorted.filter((t) => t.priority === id)));
+        const p = PRIORITIES.find((x) => x.id === id)!;
+        out.push(build(id, p.label, sorted.filter((t) => t.priority === id), { color: p.color }));
       }
       break;
 
@@ -187,7 +186,33 @@ export function isChanged(cfg: ListConfig, base: ListConfig = DEFAULT_CONFIG): b
 
 /** A saved filter may come from an older version of the app, so fill in any missing settings. */
 export function normalise(cfg: Partial<ListConfig>, base: ListConfig = DEFAULT_CONFIG): ListConfig {
-  return { ...base, ...cfg };
+  const out = { ...base, ...cfg };
+  // Sorting by name was removed; a filter saved with it falls back to the view's usual sort.
+  if (!SORT_OPTIONS.some((o) => o.id === out.sortBy)) out.sortBy = base.sortBy;
+  return out;
+}
+
+/** The sort you last chose on each screen, kept on this device so you do not have to pick it every visit. */
+const SORT_KEY = "tm-sort:";
+export function savedSort(scope: string): SortKey | null {
+  try {
+    const v = localStorage.getItem(SORT_KEY + scope);
+    return SORT_OPTIONS.some((o) => o.id === v) ? (v as SortKey) : null;
+  } catch {
+    return null;
+  }
+}
+export function rememberSort(scope: string, sortBy: SortKey) {
+  try {
+    localStorage.setItem(SORT_KEY + scope, sortBy);
+  } catch {
+    /* storage can be off in private browsing; the sort just is not remembered */
+  }
+}
+/** A view's starting settings with your remembered sort applied. */
+export function withSavedSort(base: ListConfig, scope: string): ListConfig {
+  const sortBy = savedSort(scope);
+  return sortBy ? { ...base, sortBy } : base;
 }
 
 /** Plain-language labels for every setting that differs from the view's starting settings. */

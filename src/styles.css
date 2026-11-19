@@ -150,9 +150,10 @@ input[type="checkbox"] { width: 17px; height: 17px; accent-color: var(--primary)
 .due.late { color: var(--late); background: var(--late-soft); }
 .due.today { color: var(--today); background: var(--today-soft); }
 .prio { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; font-weight: 600; color: var(--ink-3); }
-.prio.urgent { color: var(--late); }
-.prio.high { color: #d9730d; }
-.prio.medium { color: var(--primary); }
+.prio.urgent { color: #db2777; }
+.prio.high { color: #dc2626; }
+.prio.medium { color: #e0a800; }
+.prio.low { color: #16a34a; }
 
 .avatar { border-radius: 99px; background: var(--pc); color: #fff; font-weight: 700; display: inline-grid; place-items: center; flex: none; letter-spacing: 0.01em; }
 .avatar-stack { display: inline-flex; }
@@ -717,22 +718,20 @@ body.has-bulk .main { padding-bottom: 96px; }
   .filter-box:not(.grid-layout) .filter-group[aria-label="Group and sort"] .view-tools { flex-wrap: nowrap; }
 }
 
-/* Drag-to-reorder: a line shows where the dragged task will land (only when sorted by priority) */
+/* Drag-to-reorder: a line shows where the dragged task will land. Drag from the grip handle. */
 .row.drop-before { box-shadow: inset 0 2px 0 var(--primary); }
 .row.drop-after { box-shadow: inset 0 -2px 0 var(--primary); }
-.rows > .row[draggable="true"] { cursor: grab; }
+.row .grip, .subtask .grip { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 30px; margin: 0 -4px 0 -6px; color: var(--ink-3); cursor: grab; flex: none; border-radius: 5px; touch-action: none; }
+.row .grip:hover, .subtask .grip:hover { color: var(--ink); background: #e6eaf3; }
+.row .grip:active, .subtask .grip:active { cursor: grabbing; }
 
 /* ---------- Subtasks: compact line, expandable, draggable ---------- */
 .subtask { display: block; padding: 0; }
 .subtask-head { display: flex; align-items: center; gap: 8px; padding: 7px 0; }
-.subtask .grip { display: inline-flex; color: var(--ink-3); cursor: grab; flex: none; margin-left: -4px; touch-action: none; }
-.subtask-head:hover .grip { color: var(--ink-2); }
 .subtask-title { text-align: left; min-width: 0; overflow-wrap: anywhere; }
 .subtask-meta { display: flex; align-items: center; gap: 8px; flex: none; }
 .subtask .caret { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 6px; color: var(--ink-2); }
 .subtask .caret:hover { background: #e6eaf3; }
-.subtask .caret svg { transition: transform 0.15s; }
-.subtask .caret.open svg { transform: rotate(90deg); }
 .subtask.drop-before { box-shadow: inset 0 2px 0 var(--primary); }
 .subtask.drop-after { box-shadow: inset 0 -2px 0 var(--primary); }
 .subtask-more { background: #f6f8fc; border: 1px solid var(--line); border-radius: var(--r-sm); padding: 4px 14px 12px; margin: 0 0 8px 28px; display: flex; flex-direction: column; gap: 12px; }
@@ -742,3 +741,7 @@ body.has-bulk .main { padding-bottom: 96px; }
 .subtask-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .subtask-actions .btn svg { margin-right: 4px; vertical-align: -2px; }
 @media (max-width: 760px) { .subtask-meta { display: none; } .subtask-more { margin-left: 0; } }
+
+.my-sort { justify-content: flex-start; gap: 14px; margin-top: 4px; }
+.my-sort label { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; color: var(--ink-2); font-weight: 500; }
+.my-sort select { min-width: 170px; }

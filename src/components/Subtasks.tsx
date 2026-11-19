@@ -1,4 +1,4 @@
-import { useState, type DragEvent } from "react";
+import { useRef, useState, type DragEvent } from "react";
 import { ArrowDown, ArrowUp, ChevronRight, ExternalLink, GripVertical } from "lucide-react";
 import { useStore } from "../lib/store";
 import type { Task } from "../lib/types";
@@ -23,6 +23,7 @@ function SubtaskItem({ task, siblings, index }: { task: Task; siblings: Task[]; 
   const s = useStore();
   const [open, setOpen] = useState(false);
   const [edge, setEdge] = useState<"before" | "after" | null>(null);
+  const fromGrip = useRef(false);
   const done = task.status === "done";
   const canDrop = (id: string | null) => !!id && id !== task.id && siblings.some((t) => t.id === id);
 
@@ -34,11 +35,18 @@ function SubtaskItem({ task, siblings, index }: { task: Task; siblings: Task[]; 
         className="subtask-head"
         draggable
         onDragStart={(e) => {
+          if (!fromGrip.current) {
+            e.preventDefault();
+            return;
+          }
           startDrag(task.id);
           e.dataTransfer.setData("text/task", task.id);
           e.dataTransfer.effectAllowed = "move";
         }}
-        onDragEnd={endDrag}
+        onDragEnd={() => {
+          fromGrip.current = false;
+          endDrag();
+        }}
         onDragOver={(e: DragEvent<HTMLDivElement>) => {
           if (!canDrop(dragId())) return;
           e.preventDefault();
@@ -56,7 +64,7 @@ function SubtaskItem({ task, siblings, index }: { task: Task; siblings: Task[]; 
           if (dragged) s.updateTask(dragged.id, { position: placeBetween(siblings, dragged.id, task, where) });
         }}
       >
-        <span className="grip" title="Drag to reorder" aria-hidden="true"><GripVertical size={16} /></span>
+        <span className="grip" title="Drag to reorder" aria-hidden="true" onPointerDown={() => (fromGrip.current = true)} onPointerUp={() => (fromGrip.current = false)}><GripVertical size={16} /></span>
         <Check done={done} label={task.title} onToggle={() => s.updateTask(task.id, { status: done ? "todo" : "done" })} />
         <button className="subtask-title" aria-expanded={open} onClick={() => setOpen(!open)}>{task.title}</button>
         <span className="subtask-meta">

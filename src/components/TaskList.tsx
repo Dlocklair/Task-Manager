@@ -1,5 +1,5 @@
-import { useState, type DragEvent, type FormEvent } from "react";
-import { ChevronRight, ListTree, Plus } from "lucide-react";
+import { useRef, useState, type DragEvent, type FormEvent } from "react";
+import { ChevronRight, GripVertical, ListTree, Plus } from "lucide-react";
 import { useStore } from "../lib/store";
 import type { Task } from "../lib/types";
 import { dragId, endDrag, placeBetween, startDrag, type ReorderScope } from "../lib/drag";
@@ -10,6 +10,8 @@ export function TaskRow({ task, depth = 0, showProject = false, reorder }: { tas
   const s = useStore();
   const [open, setOpen] = useState(false);
   const [edge, setEdge] = useState<"before" | "after" | null>(null);
+  // Only the handle starts a drag, so tapping or scrolling on a tablet never moves a task by accident.
+  const fromGrip = useRef(false);
   const kids = s.kids(task.id);
   const project = s.project(task.project_id);
   const done = task.status === "done";
@@ -26,12 +28,19 @@ export function TaskRow({ task, depth = 0, showProject = false, reorder }: { tas
         draggable={!!reorder}
         onDragStart={(e) => {
           if (!reorder) return;
+          if (!fromGrip.current) {
+            e.preventDefault();
+            return;
+          }
           e.stopPropagation();
           startDrag(task.id);
           e.dataTransfer.setData("text/task", task.id);
           e.dataTransfer.effectAllowed = "move";
         }}
-        onDragEnd={endDrag}
+        onDragEnd={() => {
+          fromGrip.current = false;
+          endDrag();
+        }}
         onDragOver={(e: DragEvent<HTMLDivElement>) => {
           if (!canDrop(dragId())) return;
           e.preventDefault();
@@ -58,6 +67,18 @@ export function TaskRow({ task, depth = 0, showProject = false, reorder }: { tas
         onKeyDown={(e) => e.key === "Enter" && e.target === e.currentTarget && (s.selecting ? s.toggleSelect(task.id) : s.openTask(task.id))}
         tabIndex={0}
       >
+        {reorder && (
+          <span
+            className="grip"
+            title="Drag to reorder"
+            aria-hidden="true"
+            onPointerDown={() => (fromGrip.current = true)}
+            onPointerUp={() => (fromGrip.current = false)}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <GripVertical size={16} />
+          </span>
+        )}
         {kids.length > 0 ? (
           <button
             className={"caret" + (open ? " open" : "")}

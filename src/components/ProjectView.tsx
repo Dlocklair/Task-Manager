@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Columns3, LayoutList, Mail, Pencil } from "lucide-react";
 import { useStore } from "../lib/store";
-import { applyFilters, DEFAULT_CONFIG, groupTasks, NO_SEARCH, reorderMode, type TextSearch } from "../lib/listing";
+import { applyFilters, DEFAULT_CONFIG, groupTasks, NO_SEARCH, rememberSort, reorderMode, withSavedSort, type TextSearch } from "../lib/listing";
 import type { GroupKey, ListConfig, Project, Task } from "../lib/types";
 import { sortCompare, STATUSES, step, tint } from "../lib/util";
 import { QuickAdd } from "./TaskList";
@@ -19,7 +19,7 @@ const PROJECT_GROUPS: GroupKey[] = ["status", "assigned", "priority", "due", "no
 export function ProjectView({ project, onEdit }: { project: Project; onEdit(): void }) {
   const s = useStore();
   const [mode, setMode] = useState<"list" | "board">("list");
-  const [cfg, setCfg] = useState<ListConfig>(DEFAULT_CONFIG);
+  const [cfg, setCfg] = useState<ListConfig>(() => withSavedSort(DEFAULT_CONFIG, "project"));
   const [search, setSearch] = useState<TextSearch>(NO_SEARCH);
   const allTasks = s.topLevel(project.id);
   const ctx = { people: s.data.people, projects: s.data.projects, assigned: (id: string) => s.assigned(id) };
@@ -85,7 +85,7 @@ export function ProjectView({ project, onEdit }: { project: Project; onEdit(): v
           scope={project.id}
           cfg={cfg}
           base={DEFAULT_CONFIG}
-          onChange={setCfg}
+          onChange={(c) => { rememberSort("project", c.sortBy); setCfg(c); }}
           search={search}
           onSearch={setSearch}
           groups={mode === "list" ? PROJECT_GROUPS : []}
