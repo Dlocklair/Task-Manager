@@ -91,7 +91,10 @@ export const demoApi: Api = {
   insert: async (table, row) => {
     if (table === "task_comments") (demoNotes[row.task_id as string] ??= []).push({ author_id: "demo-user", created_at: new Date().toISOString(), ...row } as Note);
   },
-  update: async () => {},
+  update: async (table, id, patch) => {
+    if (table === "task_comments")
+      for (const k of Object.keys(demoNotes)) demoNotes[k] = demoNotes[k].map((n) => (n.id === id ? { ...n, ...patch, updated_at: new Date().toISOString() } : n));
+  },
   remove: async (table, id) => {
     if (table === "task_comments") for (const k of Object.keys(demoNotes)) demoNotes[k] = demoNotes[k].filter((n) => n.id !== id);
   },

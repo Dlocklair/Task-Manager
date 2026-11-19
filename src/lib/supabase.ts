@@ -64,7 +64,7 @@ export const supabaseApi: Api = {
   },
   async notes(taskId) {
     return check(
-      await sb!.from("task_comments").select("id,task_id,author_id,body,created_at").eq("task_id", taskId).order("created_at"),
+      await sb!.from("task_comments").select("id,task_id,author_id,body,created_at,updated_at").eq("task_id", taskId).order("created_at"),
     ) as Note[];
   },
   subscribe(onChange) {

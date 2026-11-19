@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { CircleCheck, FolderKanban, House, LayoutList, LogOut, Plus, Tags, Users, X } from "lucide-react";
 import { groupProjects } from "../lib/categories";
 import { useStore } from "../lib/store";
+import { DuePicker } from "./DuePicker";
 import type { Category, Priority, Project, View } from "../lib/types";
 import { COLORS, PRIORITIES, tint } from "../lib/util";
 import { Avatar, Modal, Swatches } from "./ui";
@@ -182,10 +183,13 @@ export function NewTaskDialog({ onClose }: { onClose(): void }) {
   const [projectId, setProjectId] = useState(s.view.kind === "project" ? s.view.id : (s.data.projects[0]?.id ?? ""));
   const [due, setDue] = useState("");
   const [mine, setMine] = useState(s.view.kind === "my");
+  // People this project assigns new tasks to. If that already includes you, "Assign to me" is not needed.
+  const defaults = projectId ? s.defaultAssigneesFor(projectId) : [];
+  const meByDefault = !!s.me && defaults.some((p) => p.id === s.me!.id);
   const submit = (e: FormEvent) => {
     e.preventDefault();
     if (!title.trim() || !projectId) return;
-    const id = s.addTask({ project_id: projectId, title: title.trim(), due_date: due || null, assignMe: mine });
+    const id = s.addTask({ project_id: projectId, title: title.trim(), due_date: due || null, assignMe: mine && !meByDefault });
     onClose();
     // Open the new task so its due date, status and priority can be set right away.
     s.openTask(id);
@@ -200,9 +204,15 @@ export function NewTaskDialog({ onClose }: { onClose(): void }) {
               {s.data.projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
           </label>
-          <label>Due <small>optional</small><input type="date" value={due} onChange={(e) => setDue(e.target.value)} /></label>
         </div>
-        {s.me && <label className="check-line"><input type="checkbox" checked={mine} onChange={(e) => setMine(e.target.checked)} />Assign to me</label>}
+        <div className="form-field">
+          <span>Due <small>optional</small></span>
+          <DuePicker value={due || null} onChange={(v) => setDue(v ?? "")} />
+        </div>
+        {defaults.length > 0 && (
+          <p className="form-hint">Assigned to {defaults.map((p) => (s.me && p.id === s.me.id ? "you" : p.full_name)).join(", ")} by default.</p>
+        )}
+        {s.me && !meByDefault && <label className="check-line"><input type="checkbox" checked={mine} onChange={(e) => setMine(e.target.checked)} />{defaults.length ? "Also assign to me" : "Assign to me"}</label>}
         {s.data.projects.length === 0 && <p className="form-hint">Create a project first, then add tasks to it.</p>}
         <div className="form-actions">
           <span className="grow" />

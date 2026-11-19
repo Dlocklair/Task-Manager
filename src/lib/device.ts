@@ -147,6 +147,9 @@ export const deviceApi: Api = {
       case "saved_filters":
         db.savedFilters = db.savedFilters.map((f) => (f.id === id ? { ...f, ...patch } : f));
         break;
+      case "task_comments":
+        db.notes = db.notes.map((n) => (n.id === id ? { ...n, ...patch, updated_at: new Date().toISOString() } : n));
+        break;
       default:
         return;
     }
