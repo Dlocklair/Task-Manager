@@ -842,3 +842,44 @@ body.has-bulk .main { padding-bottom: 96px; }
 .shared-note-form textarea { flex: 1; min-width: 0; resize: vertical; }
 .shared-error { background: var(--late-soft); color: var(--late); border-radius: var(--r-sm); padding: 10px 12px; margin: 0; }
 .date-with-gear { display: inline-flex; align-items: center; gap: 4px; }
+
+/* Picking a parent task for "Make subtasks of" */
+.pp { display: flex; flex-direction: column; gap: 10px; }
+.modal:has(.pp) { width: min(560px, 100%); }
+.pp-search { width: 100%; }
+.pp-done { font-size: 14px; }
+.pp-list { max-height: min(52vh, 460px); overflow-y: auto; border: 1px solid var(--line); border-radius: var(--r-sm); padding: 6px; display: flex; flex-direction: column; gap: 2px; }
+.pp-project-head { display: flex; align-items: center; gap: 8px; width: 100%; padding: 9px 8px; border-radius: 6px; font-weight: 600; text-align: left; color: var(--ink); }
+.pp-project-head:hover { background: #f1f4fa; }
+.pp-project-head i { width: 9px; height: 9px; border-radius: 3px; flex: none; }
+.pp-project-head small { color: var(--ink-3); font-weight: 500; }
+.pp-project-head svg { transition: transform 0.15s; color: var(--ink-3); }
+.pp-project-head svg.flip-90 { transform: rotate(90deg); }
+.pp-tasks { display: flex; flex-direction: column; gap: 2px; margin: 0 0 6px 14px; border-left: 2px solid var(--line); }
+.pp-task { display: flex; align-items: center; gap: 4px; border-radius: 6px; }
+.pp-task.on, .pp-result.on { background: color-mix(in srgb, var(--primary) 12%, #fff); box-shadow: inset 0 0 0 1.5px var(--primary); }
+.pp-task.is-done .pp-pick { color: var(--ink-3); text-decoration: line-through; }
+.pp-caret { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 5px; color: var(--ink-3); flex: none; transition: transform 0.15s; }
+.pp-caret.open { transform: rotate(90deg); }
+.pp-caret-space { width: 24px; flex: none; }
+.pp-pick { flex: 1; min-width: 0; text-align: left; padding: 7px 6px; display: flex; align-items: baseline; gap: 8px; color: var(--ink); }
+.pp-pick small { color: var(--ink-3); font-size: 12px; white-space: nowrap; }
+.pp-task:not(.on):hover { background: #f1f4fa; }
+.pp-result { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-align: left; padding: 8px 10px; border-radius: 6px; color: var(--ink); }
+.pp-result:not(.on):hover { background: #f1f4fa; }
+.pp-result small { color: var(--ink-3); font-size: 12px; }
+.pp-foot { align-items: center; }
+.pp-chosen { font-size: 14px; color: var(--ink-2); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bulk-dock .btn.small.bulk-pick { align-self: flex-start; }
+
+/* Wider search in page headers. The actions above stretch to the same width so their edges line up. */
+.page-head-stack { grid-template-columns: minmax(0, 1fr) minmax(min-content, min(560px, 62%)); }
+.page-head-stack .top-actions { justify-self: stretch; }
+.page-head-stack .top-actions > * { flex: 1 1 0; justify-content: center; }
+@media (max-width: 760px) {
+  .page-head-stack { grid-template-columns: minmax(0, 1fr); }
+}
+/* My tasks: the Sort by line runs the full width under the header instead of sitting in one grid cell. */
+.page-head-stack > .page-head-row.my-sort { display: flex; grid-column: 1 / -1; }
+.my-sort label span { white-space: nowrap; }
+.my-sort select { min-width: 200px; width: auto; }

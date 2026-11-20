@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
-import { ChevronDown, Pencil, Trash2, X } from "lucide-react";
+import { ChevronDown, ListTree, Pencil, Trash2, X } from "lucide-react";
+import { ParentPicker } from "./ParentPicker";
 import { useStore } from "../lib/store";
 import { DuePicker } from "./DuePicker";
 import { PRIORITIES, STATUSES } from "../lib/util";
-import type { Priority, Status, Task, TaskContext } from "../lib/types";
+import type { Priority, Status, TaskContext } from "../lib/types";
 
 /** Menu value for "no context" or "no project", since an empty value means nothing was picked. */
 const NONE = "__none__";
@@ -18,7 +19,7 @@ export function BulkBar() {
   const [person, setPerson] = useState("");
   const [days, setDays] = useState("");
   const [hours, setHours] = useState("");
-  const [parentId, setParentId] = useState("");
+  const [picking, setPicking] = useState(false);
   const [open, setOpen] = useState(false);
   const any = ids.length > 0;
 
@@ -93,25 +94,20 @@ export function BulkBar() {
         </select>
       </label>
 
-      <div className="bulk-field wide">
-        <span>Make subtask of…</span>
-        <div className="bulk-inline">
-          <select value={parentId} onChange={(e) => setParentId(e.target.value)} aria-label="Parent task">
-            <option value="">Choose a task…</option>
-            {s.data.tasks
-              .filter((t: Task) => !t.parent_task_id && !ids.includes(t.id))
-              .map((t: Task) => {
-                const proj = s.project(t.project_id);
-                return <option key={t.id} value={t.id}>{proj ? `${proj.name} → ` : ""}{t.title}</option>;
-              })}
-          </select>
-          <button
-            className="btn small"
-            disabled={!parentId}
-            onClick={() => { if (parentId) { s.bulkReparent(ids, parentId); setParentId(""); } }}
-          >Move</button>
-        </div>
+      <div className="bulk-field">
+        <span>Make subtasks of…</span>
+        <button className="btn small bulk-pick" onClick={() => setPicking(true)}><ListTree size={14} />Choose a task…</button>
       </div>
+      {picking && (
+        <ParentPicker
+          ids={ids}
+          onClose={() => setPicking(false)}
+          onPick={(parentId) => {
+            s.bulkReparent(ids, parentId);
+            setPicking(false);
+          }}
+        />
+      )}
 
       <div className="bulk-field wide">
         <span>Assigned to</span>
