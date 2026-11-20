@@ -27,7 +27,7 @@ export function TaskDetail({ task }: { task: Task }) {
     <aside className="detail" style={tint(project?.color ?? "#5B6B86")} aria-label="Task details">
       <header className="detail-head">
         <button className="icon-btn back" onClick={() => s.openTask(null)} aria-label="Back"><ArrowLeft size={20} /></button>
-        <span className="proj-chip"><i />{project?.name}</span>
+        <span className={"proj-chip" + (project ? "" : " none")}><i />{project?.name ?? "No project"}</span>
         <span className="grow" />
         <button
           className="icon-btn danger"
@@ -106,13 +106,14 @@ function Notes({ taskId }: { taskId: string }) {
   const body = s.drafts[taskId] ?? "";
   const setBody = (text: string) => s.setDraft(taskId, text);
 
+  // Fetched again when the server sends fresh data, so a note added through an update link appears here.
   useEffect(() => {
     let live = true;
-    s.api.notes(taskId).then((n) => live && setNotes(n)).catch(() => live && setNotes([]));
+    s.api.notes(taskId).then((n) => live && setNotes(n)).catch(() => live && setNotes((cur) => cur ?? []));
     return () => {
       live = false;
     };
-  }, [s.api, taskId]);
+  }, [s.api, taskId, s.synced]);
 
   const add = (e: FormEvent) => {
     e.preventDefault();
@@ -211,7 +212,7 @@ function NoteItem({ note, mine, onEdit, onDelete }: { note: Note; mine: boolean;
     <div className="note">
       <RichView text={note.body} />
       <footer>
-        <time>{when(note.created_at)}{edited && <span title={`Edited ${when(note.updated_at!)}`}> · edited</span>}</time>
+        <time>{note.author_name && <strong className="note-by">{note.author_name} · </strong>}{when(note.created_at)}{edited && <span title={`Edited ${when(note.updated_at!)}`}> · edited</span>}</time>
         {mine && (
           <span className="note-actions">
             <button onClick={() => { setDraft(note.body); setEditing(true); }}>Edit</button>

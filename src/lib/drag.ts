@@ -13,12 +13,8 @@ export const endDrag = () => {
   dragging = null;
 };
 
-/**
- * What a drop does. "priority" is used when the list is sorted by priority: dropping next to a task of
- * another priority gives the dragged task that priority, so it stays where it was dropped.
- * "manual" only changes the order.
- */
-export type ReorderMode = "priority" | "manual";
+/** What a drop does. "manual" only changes the order: priority and status never change on a drop. */
+export type ReorderMode = "manual";
 
 /** A set of tasks that can be dragged among themselves, and nowhere else. */
 export interface ReorderScope {

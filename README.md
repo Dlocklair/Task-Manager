@@ -10,6 +10,9 @@ Built with React, TypeScript and Vite. Data lives in Supabase (Postgres with row
 - **Projects** – each project has its own color. View tasks as a list grouped by status, or as a board you can drag cards across.
 - **Tasks** – status (To do, In progress, Done), priority, due date, details, notes, and any number of nested subtasks.
 - **People** – add anyone by name and assign them to tasks. They don't need an account.
+- **Update links** – give someone a private link (People → Update link, or from Email tasks). It opens their assigned tasks with no sign-in; they can change status and add notes, and the changes appear in your tasks. Turn a link off at any time.
+- **Email tasks** – sends an easy-to-read outline (numbered tasks with due date, priority, details and subtasks), with a Word document of the same list to attach or share.
+- **Settings** – rename, add, remove and reorder contexts.
 - **My tasks** – everything assigned to you, by due date.
 - **Phone and tablet** – bottom tab bar and full-screen task details on small screens; "Add to Home Screen" installs it like an app.
 
@@ -21,7 +24,7 @@ npm run dev      # http://localhost:5173
 npm run build    # production build in dist/
 ```
 
-Open `http://localhost:5173/?demo` to look around with sample data and no account. Nothing is saved in demo mode.
+Open `http://localhost:5173/?demo` to look around with sample data and no account. Nothing is saved in demo mode. `?update=demo` shows the page an update link opens.
 
 ## Supabase
 

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useStore } from "../lib/store";
-import { ALL_BASE, applyFilters, groupTasks, NO_SEARCH, rememberSort, reorderMode, withSavedSort, type TextSearch } from "../lib/listing";
+import { ALL_BASE, applyFilters, countTotal, groupTasks, NO_SEARCH, rememberSort, reorderMode, withSavedSort, type TextSearch } from "../lib/listing";
 import type { GroupKey, ListConfig } from "../lib/types";
 import { ListTools } from "./ListTools";
 import { SearchBox } from "./SearchBox";
@@ -16,7 +16,7 @@ export function AllTasks() {
   const [cfg, setCfg] = useState<ListConfig>(() => withSavedSort(ALL_BASE, "all"));
   const [search, setSearch] = useState<TextSearch>(NO_SEARCH);
   const roots = s.data.tasks.filter((t) => !t.parent_task_id);
-  const ctx = { people: s.data.people, projects: s.data.projects, assigned: (id: string) => s.assigned(id) };
+  const ctx = { people: s.data.people, projects: s.data.projects, contexts: s.contexts, assigned: (id: string) => s.assigned(id) };
   const tasks = applyFilters(roots, cfg, ctx, search);
   const sections = groupTasks(tasks, cfg, ctx);
   const open = roots.filter((t) => t.status !== "done").length;
@@ -41,7 +41,7 @@ export function AllTasks() {
       </header>
 
       {roots.length > 0 && (
-        <ListTools scope="all" cfg={cfg} base={ALL_BASE} onChange={(c) => { rememberSort("all", c.sortBy); setCfg(c); }} search={search} onSearch={setSearch} groups={ALL_GROUPS} showProject showSearch={false} shown={tasks.length} total={roots.length} />
+        <ListTools scope="all" cfg={cfg} base={ALL_BASE} onChange={(c) => { rememberSort("all", c.sortBy); setCfg(c); }} search={search} onSearch={setSearch} groups={ALL_GROUPS} showProject showSearch={false} shown={tasks.length} total={countTotal(roots, cfg, search)} />
       )}
 
       {roots.length === 0 ? (

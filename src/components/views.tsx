@@ -1,12 +1,14 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { Check as CheckIcon, Mail, Pencil, Plus, Tags, Trash2 } from "lucide-react";
+import { Check as CheckIcon, Settings as SettingsIcon } from "lucide-react";
+import { Link2, Mail, Pencil, Plus, Tags, Trash2 } from "lucide-react";
 import { useStore } from "../lib/store";
 import type { Person, SortKey, Task } from "../lib/types";
 import type { ReorderScope } from "../lib/drag";
 import { addDays, byUrgency, COLORS, firstName, greeting, isoDay, sortCompare, tint } from "../lib/util";
 import { NO_SEARCH, rememberSort, reorderMode, savedSort, searchTasks, SORT_OPTIONS, type TextSearch } from "../lib/listing";
 import { CategoryDialog } from "./Shell";
-import { mailtoLink } from "../lib/mail";
+import { buildOutline, type Outline } from "../lib/outline";
+import { EmailDialog } from "./EmailDialog";
 import { TaskRow } from "./TaskList";
 import { SearchBox } from "./SearchBox";
 import { TopActions } from "./TopActions";
@@ -50,7 +52,11 @@ export function Home({ onNewProject }: { onNewProject(): void }) {
     <div className="page">
       <header className="page-head page-head-stack">
         <div className="page-head-row">
-          <p className="date-line">{new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}</p>
+          <span className="date-with-gear">
+            <p className="date-line">{new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}</p>
+            {/* Phones have no sidebar, so Settings is reached from here. */}
+            <button className="icon-btn mobile-only" onClick={() => s.go({ kind: "settings" })} aria-label="Settings"><SettingsIcon size={19} /></button>
+          </span>
           <TopActions />
         </div>
         <div className="page-head-row">
@@ -227,6 +233,7 @@ export function People() {
   const [adding, setAdding] = useState(false);
   const [editing, setEditing] = useState<Person | null>(null);
   const [pick, setPick] = useState<string | null>(null);
+  const [email, setEmail] = useState<{ to: string[]; outline: Outline; personId: string } | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const person = s.data.people.find((p) => p.id === pick);
   const theirs = person ? s.tasksFor(person.id).filter((t) => t.status !== "done").sort(byUrgency) : [];
@@ -323,16 +330,24 @@ export function People() {
           <div className="group-bar">
             <h2 className="group-head"><i />Open tasks for {firstName(person.full_name)}<span>{theirs.length}</span></h2>
             <div className="group-actions">
-              {person.email ? (
-                <a className="btn quiet" href={mailtoLink([person.email], "Your open tasks", [
-                  `Hi ${firstName(person.full_name)},`,
-                  "",
-                  theirs.length ? "Here are your open tasks:" : "You have no open tasks right now.",
-                  ...theirs.map((t) => `- ${t.title}${t.due_date ? ` (due ${t.due_date})` : ""}`),
-                ])}><Mail size={15} />Email tasks</a>
-              ) : (
-                <button className="btn quiet" disabled title="Add an email address to send tasks"><Mail size={15} />Email tasks</button>
-              )}
+              <button
+                className="btn quiet"
+                onClick={() =>
+                  setEmail({
+                    to: person.email ? [person.email] : [],
+                    personId: person.id,
+                    outline: buildOutline(s, theirs, {
+                      title: `Open tasks for ${person.full_name}`,
+                      intro: [`Hi ${firstName(person.full_name)},`, "", theirs.length ? `Here are your open tasks (${theirs.length}):` : "You have no open tasks right now."],
+                      showProject: true,
+                      showPeople: false,
+                    }),
+                  })
+                }
+              >
+                <Mail size={15} />Email tasks
+              </button>
+              {s.api.createShareLink && person.user_id !== s.data.userId && <UpdateLinkButton personId={person.id} name={firstName(person.full_name)} />}
               <button className="btn quiet" onClick={() => setEditing(person)}><Pencil size={15} />Edit</button>
               {person.user_id !== s.data.userId && (
                 <button
@@ -353,9 +368,58 @@ export function People() {
         </section>
       )}
 
+      {email && <EmailDialog to={email.to} outline={email.outline} personId={email.personId} onClose={() => setEmail(null)} />}
       {adding && <PersonDialog onClose={() => setAdding(false)} />}
       {editing && <PersonDialog person={editing} onClose={() => setEditing(null)} onDeleted={() => { setPick(null); setEditing(null); }} />}
     </div>
+  );
+}
+
+/**
+ * An update link lets this person open their tasks in a browser, with no account, and mark them done or add notes.
+ * Their changes land straight in your tasks. Turning the link off stops it working at once.
+ */
+function UpdateLinkButton({ personId, name }: { personId: string; name: string }) {
+  const s = useStore();
+  const link = s.shareLinkFor(personId);
+  const [busy, setBusy] = useState(false);
+  const copy = async (url: string) => {
+    try {
+      await navigator.clipboard.writeText(url);
+      s.toast(`Update link copied. Send it to ${name}; it opens their tasks with no sign-in.`);
+    } catch {
+      window.prompt("Copy this link", url);
+    }
+  };
+  if (!link) {
+    return (
+      <button
+        className="btn quiet"
+        disabled={busy}
+        title={`Make a link ${name} can use to update their tasks`}
+        onClick={async () => {
+          setBusy(true);
+          const made = await s.createShareLink(personId);
+          setBusy(false);
+          if (made) void copy(s.shareUrl(made));
+        }}
+      >
+        <Link2 size={15} />{busy ? "Making link…" : "Update link"}
+      </button>
+    );
+  }
+  return (
+    <span className="link-pair">
+      <button className="btn quiet" onClick={() => void copy(s.shareUrl(link))} title={`Copy ${name}'s update link`}><Link2 size={15} />Copy update link</button>
+      <button
+        className="btn quiet small"
+        onClick={() => {
+          if (window.confirm(`Turn off ${name}'s update link? It will stop working right away. You can make a new one later.`)) s.removeShareLink(personId);
+        }}
+      >
+        Turn off
+      </button>
+    </span>
   );
 }
 

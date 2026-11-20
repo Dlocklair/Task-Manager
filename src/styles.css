@@ -152,7 +152,9 @@ input[type="checkbox"] { width: 17px; height: 17px; accent-color: var(--primary)
 .prio { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; font-weight: 600; color: var(--ink-3); }
 .prio.urgent { color: #db2777; }
 .prio.high { color: #dc2626; }
-.prio.medium { color: #e0a800; }
+/* Bright yellow flag; the label beside it stays dark enough to read. */
+.prio.medium { color: #a16207; }
+.prio.medium svg { color: #facc15; stroke: #e5b000; }
 .prio.low { color: #16a34a; }
 
 .avatar { border-radius: 99px; background: var(--pc); color: #fff; font-weight: 700; display: inline-grid; place-items: center; flex: none; letter-spacing: 0.01em; }
@@ -794,3 +796,49 @@ body.has-bulk .main { padding-bottom: 96px; }
 .detail .task-fields .field-row input.due-time { width: 108px; flex: none; }
 .field-line { align-items: start; }
 .field-line > .field-label { padding-top: 6px; }
+
+/* Settings */
+.mobile-only { display: none; }
+@media (max-width: 760px) { .mobile-only { display: inline-grid; } }
+.side-foot .icon-btn.on { background: rgba(255, 255, 255, 0.14); color: #fff; }
+.settings-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 18px 20px; margin-bottom: 18px; display: flex; flex-direction: column; gap: 12px; max-width: 720px; }
+.settings-card h2 { font-size: 18px; margin: 0; }
+.settings-card .field-hint { margin: 0; }
+.ctx-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.ctx-row { display: flex; align-items: center; gap: 6px; }
+.ctx-row input { flex: 1; min-width: 0; }
+.ctx-count { font-size: 13px; color: var(--ink-3); min-width: 64px; text-align: right; margin-right: 4px; }
+.ctx-row .icon-btn:disabled { opacity: 0.35; }
+
+/* Email dialog */
+.email-dialog { gap: 14px; }
+.email-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.email-actions a.btn { text-decoration: none; }
+.email-link-offer { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; background: #eef3ff; border: 1px solid #d3defc; border-radius: var(--r-sm); padding: 10px 12px; font-size: 14px; }
+.email-link-offer span { flex: 1; min-width: 200px; }
+.email-link-on { display: flex; align-items: center; gap: 6px; }
+.email-preview-toggle { align-self: flex-start; }
+.email-preview { white-space: pre-wrap; font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; background: #f6f7fb; border: 1px solid var(--line); border-radius: var(--r-sm); padding: 12px; max-height: 320px; overflow: auto; margin: 0; }
+.link-pair { display: inline-flex; align-items: center; gap: 2px; }
+.note-by { font-weight: 700; color: var(--ink); }
+.proj-chip.none { --pc: #8690a6; }
+
+/* Update link page (no account) */
+.shared { max-width: 760px; margin: 0 auto; padding: 28px 18px 60px; display: flex; flex-direction: column; gap: 16px; }
+.shared-head .brand { color: var(--ink); padding: 0 0 18px; }
+.shared-head h1 { font: 700 28px var(--display); margin: 0 0 6px; }
+.shared-head p { color: var(--ink-2); margin: 0; }
+.shared-sub { font: 700 18px var(--display); margin: 14px 0 0; color: var(--ink-2); }
+.shared-list { display: flex; flex-direction: column; gap: 14px; }
+.shared-card { background: var(--surface); border: 1px solid var(--line); border-left: 5px solid var(--pc); border-radius: var(--r); padding: 16px 18px; display: flex; flex-direction: column; gap: 12px; }
+.shared-card.is-done h3 { text-decoration: line-through; color: var(--ink-3); }
+.shared-card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.shared-card h3 { font-size: 18px; margin: 0; }
+.shared-facts { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 13px; color: var(--ink-2); }
+.shared-status { flex-wrap: wrap; }
+.shared-status button { padding: 8px 14px; }
+.shared-notes { display: flex; flex-direction: column; gap: 8px; }
+.shared-note-form { display: flex; gap: 8px; align-items: flex-end; }
+.shared-note-form textarea { flex: 1; min-width: 0; resize: vertical; }
+.shared-error { background: var(--late-soft); color: var(--late); border-radius: var(--r-sm); padding: 10px 12px; margin: 0; }
+.date-with-gear { display: inline-flex; align-items: center; gap: 4px; }

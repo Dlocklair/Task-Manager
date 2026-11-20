@@ -3,7 +3,7 @@ import { Bookmark, X } from "lucide-react";
 import { useStore } from "../lib/store";
 import { activeFilters, GROUP_OPTIONS, isChanged, normalise, SORT_OPTIONS, sameConfig, type TextSearch } from "../lib/listing";
 import type { GroupKey, ListConfig } from "../lib/types";
-import { CONTEXTS, PRIORITIES } from "../lib/util";
+import { PRIORITIES } from "../lib/util";
 import { SearchBox } from "./SearchBox";
 
 interface Props {
@@ -34,7 +34,7 @@ export function ListTools({ scope, cfg, base, onChange, search, onSearch, groups
   const set = <K extends keyof ListConfig>(key: K, value: ListConfig[K]) => onChange({ ...cfg, [key]: value });
   const people = [...s.data.people].sort((a, b) => a.full_name.localeCompare(b.full_name));
   const saved = s.data.savedFilters.filter((f) => f.scope === scope);
-  const ctx = { people: s.data.people, projects: s.data.projects, assigned: (id: string) => s.assigned(id) };
+  const ctx = { people: s.data.people, projects: s.data.projects, contexts: s.contexts, assigned: (id: string) => s.assigned(id) };
   const applied = saved.find((f) => sameConfig(normalise(f.config, base), cfg));
   const active = activeFilters(cfg, base, ctx, search);
   // Searches are not saved, so only the settings decide whether there is something to save.
@@ -63,7 +63,7 @@ export function ListTools({ scope, cfg, base, onChange, search, onSearch, groups
       <select className={hot("context")} value={cfg.context} onChange={(e) => set("context", e.target.value)}>
         <option value="all">Any context</option>
         <option value="none">No context</option>
-        {CONTEXTS.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
+        {s.contexts.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
       </select>
     </label>
   );
@@ -118,6 +118,7 @@ export function ListTools({ scope, cfg, base, onChange, search, onSearch, groups
                 <span>Project</span>
                 <select className={hot("project")} value={cfg.project} onChange={(e) => set("project", e.target.value)}>
                   <option value="all">All projects</option>
+                  <option value="none">No project</option>
                   {s.data.projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                 </select>
               </label>

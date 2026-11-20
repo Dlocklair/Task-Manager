@@ -58,9 +58,8 @@ export function TaskRow({ task, depth = 0, showProject = false, reorder }: { tas
           const where = edge ?? "after";
           const dragged = s.task(id!);
           if (!dragged) return;
-          // Sorted by priority, dropping next to another priority gives the task that priority.
-          const change = reorder.mode === "priority" && dragged.priority !== task.priority ? { priority: task.priority } : {};
-          s.updateTask(dragged.id, { position: placeBetween(reorder.list, dragged.id, task, where), ...change });
+          // Only the order changes. The task keeps its priority and status wherever it is dropped.
+          s.updateTask(dragged.id, { position: placeBetween(reorder.list, dragged.id, task, where) });
         }}
         // While selecting several tasks, a click ticks the row instead of opening the side panel over the list.
         onClick={() => (s.selecting ? s.toggleSelect(task.id) : s.openTask(task.id))}

@@ -5,7 +5,7 @@ import { IndentDecrease, IndentIncrease, List, ListOrdered, Pencil } from "lucid
 // "1. " are numbers, and two spaces of indent per level nest them. Nothing extra to store.
 
 type Kind = "text" | "bullet" | "number";
-interface Line { indent: number; kind: Kind; text: string; n: number }
+export interface Line { indent: number; kind: Kind; text: string; n: number }
 
 const BULLET = /^( *)[-*•] (.*)$/;
 const NUMBER = /^( *)(\d{1,3})[.)] (.*)$/;
@@ -20,7 +20,7 @@ function classify(raw: string): Omit<Line, "n"> {
 }
 
 /** Parse every line and work out the number for each numbered line, restarting after other lines at that level. */
-function parse(value: string): Line[] {
+export function parse(value: string): Line[] {
   const counters: number[] = [];
   return value.split("\n").map((raw) => {
     const c = classify(raw);

@@ -1,5 +1,5 @@
 import type { CSSProperties } from "react";
-import type { Priority, Status, Task, TaskContext } from "./types";
+import type { ContextDef, Priority, Status, Task } from "./types";
 
 export const COLORS = ["#3157E0", "#0B8478", "#2F8540", "#B26A00", "#D4472F", "#B8357F", "#6F47D0", "#55657F"];
 
@@ -13,13 +13,13 @@ export const STATUSES: { id: Status; label: string }[] = [
 export const PRIORITIES: { id: Priority; label: string; color: string }[] = [
   { id: "none", label: "No priority", color: "#94A3B8" },
   { id: "low", label: "Low", color: "#16A34A" },
-  { id: "medium", label: "Medium", color: "#E0A800" },
+  { id: "medium", label: "Medium", color: "#FACC15" },
   { id: "high", label: "High", color: "#DC2626" },
   { id: "urgent", label: "Urgent", color: "#DB2777" },
 ];
 
-/** Where or how a task can be done. Filter by these when you are away from your computer. */
-export const CONTEXTS: { id: TaskContext; label: string }[] = [
+/** The contexts a new workspace starts with. Each workspace can edit its own list in Settings. */
+export const DEFAULT_CONTEXTS: ContextDef[] = [
   { id: "computer", label: "Computer" },
   { id: "phone", label: "Phone" },
   { id: "home", label: "Home" },
