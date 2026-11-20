@@ -1,5 +1,5 @@
 import type { Api, Assignee, Category, Data, Note, Person, Project, SavedFilter, Task } from "./types";
-import { COLORS } from "./util";
+import { COLORS, DEFAULT_CONTEXTS } from "./util";
 
 // A device-only copy of the data. It lives in this browser on this device and is never sent anywhere.
 // It implements the same interface as the cloud version, so the screens work unchanged.
@@ -20,7 +20,7 @@ interface Db {
 
 function empty(): Db {
   return {
-    workspace: { id: WS, name: "On this device", default_assignee_ids: [] },
+    workspace: { id: WS, name: "On this device", default_assignee_ids: [], contexts: DEFAULT_CONTEXTS },
     projects: [],
     categories: [],
     tasks: [],
@@ -34,7 +34,12 @@ function empty(): Db {
 function read(): Db {
   try {
     const raw = localStorage.getItem(KEY);
-    if (raw) return { ...empty(), ...(JSON.parse(raw) as Partial<Db>) };
+    if (raw) {
+      const db = { ...empty(), ...(JSON.parse(raw) as Partial<Db>) };
+      // Copies saved before contexts could be edited start with the original list.
+      if (!Array.isArray(db.workspace.contexts)) db.workspace = { ...db.workspace, contexts: DEFAULT_CONTEXTS };
+      return db;
+    }
   } catch {
     // Unreadable data starts fresh rather than breaking the app.
   }
@@ -81,6 +86,7 @@ export const deviceApi: Api = {
       people: db.people,
       assignees: db.assignees,
       savedFilters: db.savedFilters,
+      shareLinks: [],
     };
   },
 
@@ -131,16 +137,16 @@ export const deviceApi: Api = {
         db.people = db.people.map((p) => (p.id === id ? { ...p, ...patch } : p));
         break;
       case "tasks": {
-        const moving = patch.project_id ? branch(db.tasks, id) : null;
+        const moving = "project_id" in patch ? branch(db.tasks, id) : null;
         const now = new Date().toISOString();
         db.tasks = db.tasks.map((t) => {
           if (t.id === id) {
             const next = { ...t, ...patch } as Task;
             if (patch.status) next.completed_at = patch.status === "done" ? (t.completed_at ?? now) : null;
-            if (patch.project_id && patch.project_id !== t.project_id) next.parent_task_id = null;
+            if ("project_id" in patch && patch.project_id !== t.project_id) next.parent_task_id = null;
             return next;
           }
-          return moving?.has(t.id) ? { ...t, project_id: patch.project_id as string } : t;
+          return moving?.has(t.id) ? { ...t, project_id: (patch.project_id as string | null) ?? null } : t;
         });
         break;
       }

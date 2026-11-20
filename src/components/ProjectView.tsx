@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { Columns3, LayoutList, Mail, Pencil } from "lucide-react";
 import { useStore } from "../lib/store";
-import { applyFilters, DEFAULT_CONFIG, groupTasks, NO_SEARCH, rememberSort, reorderMode, withSavedSort, type TextSearch } from "../lib/listing";
+import { applyFilters, countTotal, DEFAULT_CONFIG, groupTasks, NO_SEARCH, rememberSort, reorderMode, withSavedSort, type TextSearch } from "../lib/listing";
 import type { GroupKey, ListConfig, Project, Task } from "../lib/types";
 import { sortCompare, STATUSES, step, tint } from "../lib/util";
 import { QuickAdd } from "./TaskList";
-import { mailtoLink } from "../lib/mail";
+import { buildOutline, type Outline } from "../lib/outline";
+import { EmailDialog } from "./EmailDialog";
 import { ListTools } from "./ListTools";
 import { TopActions } from "./TopActions";
 import { TaskSections } from "./TaskSections";
@@ -21,6 +22,7 @@ export function ProjectView({ project, onEdit }: { project: Project; onEdit(): v
   const [mode, setMode] = useState<"list" | "board">("list");
   const [cfg, setCfg] = useState<ListConfig>(() => withSavedSort(DEFAULT_CONFIG, "project"));
   const [search, setSearch] = useState<TextSearch>(NO_SEARCH);
+  const [email, setEmail] = useState<{ to: string[]; outline: Outline } | null>(null);
   const allTasks = s.topLevel(project.id);
   const ctx = { people: s.data.people, projects: s.data.projects, assigned: (id: string) => s.assigned(id) };
   // Filtering is by the task's own assignees. Subtasks are not filtered separately.
@@ -51,15 +53,27 @@ export function ProjectView({ project, onEdit }: { project: Project; onEdit(): v
               const people = new Map<string, { name: string; email: string | null }>();
               open.forEach((t) => s.assigned(t.id).forEach((p) => people.set(p.id, { name: p.full_name, email: p.email })));
               const to = [...people.values()].map((p) => p.email).filter((e): e is string => !!e);
-              if (to.length === 0) return <button className="icon-btn on-color" disabled aria-label="Email assignees" title="Assign people with an email address to email them"><Mail size={17} /></button>;
-              const lines = open.map((t) => {
-                const names = s.assigned(t.id).map((p) => p.full_name).join(", ");
-                return `- ${t.title}${t.due_date ? ` (due ${t.due_date})` : ""}${names ? ` — ${names}` : ""}`;
-              });
+              // Without addresses the dialog still opens: the Word document and the text can be sent any way you like.
+              const sorted = [...open].sort(sortCompare("due", () => ""));
               return (
-                <a className="icon-btn on-color" href={mailtoLink(to, `Open tasks: ${project.name}`, [`Open tasks in ${project.name}:`, "", ...lines])} aria-label="Email assignees" title="Email assignees">
+                <button
+                  className="icon-btn on-color"
+                  aria-label="Email assignees"
+                  title="Email assignees"
+                  onClick={() =>
+                    setEmail({
+                      to,
+                      outline: buildOutline(s, sorted, {
+                        title: `Open tasks: ${project.name}`,
+                        intro: ["Hi all,", "", `Here are the open tasks in ${project.name} (${sorted.length}):`],
+                        showProject: false,
+                        showPeople: true,
+                      }),
+                    })
+                  }
+                >
                   <Mail size={17} />
-                </a>
+                </button>
               );
             })()}
             <button className="icon-btn on-color" onClick={onEdit} aria-label="Edit project"><Pencil size={17} /></button>
@@ -91,7 +105,7 @@ export function ProjectView({ project, onEdit }: { project: Project; onEdit(): v
           groups={mode === "list" ? PROJECT_GROUPS : []}
           showProject={false}
           shown={tasks.length}
-          total={allTasks.length}
+          total={countTotal(allTasks, cfg, search)}
         />
       )}
 
@@ -104,6 +118,7 @@ export function ProjectView({ project, onEdit }: { project: Project; onEdit(): v
       ) : (
         <Board groups={board} projectId={project.id} />
       )}
+      {email && <EmailDialog to={email.to} outline={email.outline} onClose={() => setEmail(null)} />}
     </div>
   );
 }

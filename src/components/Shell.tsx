@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { CircleCheck, FolderKanban, House, LayoutList, LogOut, Plus, Tags, Users, X } from "lucide-react";
+import { CircleCheck, FolderKanban, House, LayoutList, LogOut, Plus, Settings, Tags, Users, X } from "lucide-react";
 import { groupProjects } from "../lib/categories";
 import { useStore } from "../lib/store";
 import { DuePicker } from "./DuePicker";
@@ -69,6 +69,9 @@ export function Sidebar({ onNewProject, onSignOut }: { onNewProject(): void; onS
       <div className="side-foot">
         {s.me && <Avatar person={s.me} size={30} />}
         <span className="grow who">{s.me?.full_name ?? s.data.email}{s.api.demo && <small>Sample data, nothing is saved</small>}{s.api.local && <small>Saved on this device only</small>}</span>
+        <button className={"icon-btn on-dark" + (s.view.kind === "settings" ? " on" : "")} onClick={() => s.go({ kind: "settings" })} aria-label="Settings" title="Settings">
+          <Settings size={17} />
+        </button>
         {onSignOut && (
           <button className="icon-btn on-dark" onClick={onSignOut} aria-label={s.api.local ? "Leave device-only mode" : "Sign out"} title={s.api.local ? "Leave device-only mode and sign in" : "Sign out"}>
             <LogOut size={17} />
@@ -180,16 +183,17 @@ export function ProjectDialog({ project, onClose }: { project?: Project; onClose
 export function NewTaskDialog({ onClose }: { onClose(): void }) {
   const s = useStore();
   const [title, setTitle] = useState("");
-  const [projectId, setProjectId] = useState(s.view.kind === "project" ? s.view.id : (s.data.projects[0]?.id ?? ""));
+  // Inside a project, new tasks go to that project. Anywhere else they start with no project.
+  const [projectId, setProjectId] = useState(s.view.kind === "project" ? s.view.id : "");
   const [due, setDue] = useState("");
   const [mine, setMine] = useState(s.view.kind === "my");
   // People this project assigns new tasks to. If that already includes you, "Assign to me" is not needed.
-  const defaults = projectId ? s.defaultAssigneesFor(projectId) : [];
+  const defaults = s.defaultAssigneesFor(projectId || null);
   const meByDefault = !!s.me && defaults.some((p) => p.id === s.me!.id);
   const submit = (e: FormEvent) => {
     e.preventDefault();
-    if (!title.trim() || !projectId) return;
-    const id = s.addTask({ project_id: projectId, title: title.trim(), due_date: due || null, assignMe: mine && !meByDefault });
+    if (!title.trim()) return;
+    const id = s.addTask({ project_id: projectId || null, title: title.trim(), due_date: due || null, assignMe: mine && !meByDefault });
     onClose();
     // Open the new task so its due date, status and priority can be set right away.
     s.openTask(id);
@@ -200,7 +204,8 @@ export function NewTaskDialog({ onClose }: { onClose(): void }) {
         <label>Task<input autoFocus value={title} onChange={(e) => setTitle(e.target.value)} placeholder="What needs doing?" required /></label>
         <div className="form-two">
           <label>Project
-            <select value={projectId} onChange={(e) => setProjectId(e.target.value)} required>
+            <select value={projectId} onChange={(e) => setProjectId(e.target.value)}>
+              <option value="">No project</option>
               {s.data.projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
           </label>
@@ -213,11 +218,10 @@ export function NewTaskDialog({ onClose }: { onClose(): void }) {
           <p className="form-hint">Assigned to {defaults.map((p) => (s.me && p.id === s.me.id ? "you" : p.full_name)).join(", ")} by default.</p>
         )}
         {s.me && !meByDefault && <label className="check-line"><input type="checkbox" checked={mine} onChange={(e) => setMine(e.target.checked)} />{defaults.length ? "Also assign to me" : "Assign to me"}</label>}
-        {s.data.projects.length === 0 && <p className="form-hint">Create a project first, then add tasks to it.</p>}
         <div className="form-actions">
           <span className="grow" />
           <button type="button" className="btn" onClick={onClose}>Cancel</button>
-          <button type="submit" className="btn primary" disabled={!title.trim() || !projectId}>Add task</button>
+          <button type="submit" className="btn primary" disabled={!title.trim()}>Add task</button>
         </div>
       </form>
     </Modal>

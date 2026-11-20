@@ -1,7 +1,7 @@
 import { X } from "lucide-react";
 import { useStore } from "../lib/store";
 import type { Priority, Task, TaskContext } from "../lib/types";
-import { CONTEXTS, PRIORITIES, STATUSES, step } from "../lib/util";
+import { PRIORITIES, STATUSES, step } from "../lib/util";
 import { AssigneePicker } from "./AssigneePicker";
 import { DuePicker } from "./DuePicker";
 import { ReminderField } from "./ReminderField";
@@ -92,7 +92,8 @@ export function TaskFields({ task, compact = false }: { task: Task; compact?: bo
             <span className="field-label">Context</span>
             <select value={task.context ?? ""} onChange={(e) => s.updateTask(task.id, { context: (e.target.value || null) as TaskContext | null })}>
               <option value="">No context</option>
-              {CONTEXTS.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
+              {s.contexts.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
+              {task.context && !s.contexts.some((c) => c.id === task.context) && <option value={task.context}>Removed context</option>}
             </select>
           </label>
         </div>
@@ -103,7 +104,8 @@ export function TaskFields({ task, compact = false }: { task: Task; compact?: bo
         {!compact && (
           <div className="field-line">
             <label className="field-label" htmlFor={id("proj")}>Project</label>
-            <select id={id("proj")} value={task.project_id} onChange={(e) => s.updateTask(task.id, { project_id: e.target.value })}>
+            <select id={id("proj")} value={task.project_id ?? ""} onChange={(e) => s.updateTask(task.id, { project_id: e.target.value || null })}>
+              <option value="">No project</option>
               {s.data.projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
           </div>

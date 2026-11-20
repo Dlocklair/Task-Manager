@@ -2,8 +2,11 @@ import { useEffect, useState } from "react";
 import { ChevronDown, Pencil, Trash2, X } from "lucide-react";
 import { useStore } from "../lib/store";
 import { DuePicker } from "./DuePicker";
-import { CONTEXTS, PRIORITIES, STATUSES } from "../lib/util";
+import { PRIORITIES, STATUSES } from "../lib/util";
 import type { Priority, Status, Task, TaskContext } from "../lib/types";
+
+/** Menu value for "no context" or "no project", since an empty value means nothing was picked. */
+const NONE = "__none__";
 
 /**
  * Appears when tasks are selected. It starts as a slim bar so the list stays clear and you can keep picking
@@ -68,9 +71,10 @@ export function BulkBar() {
 
       <label className="bulk-field">
         <span>Context</span>
-        <select value="" onChange={(e) => e.target.value && s.bulkUpdate(ids, { context: e.target.value as TaskContext })}>
+        <select value="" onChange={(e) => e.target.value && s.bulkUpdate(ids, { context: e.target.value === NONE ? null : (e.target.value as TaskContext) })}>
           <option value="">Choose…</option>
-          {CONTEXTS.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
+          {s.contexts.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
+          <option value={NONE}>No context</option>
         </select>
       </label>
 
@@ -82,9 +86,10 @@ export function BulkBar() {
 
       <label className="bulk-field">
         <span>Project</span>
-        <select value="" onChange={(e) => e.target.value && s.bulkUpdate(ids, { project_id: e.target.value })}>
+        <select value="" onChange={(e) => e.target.value && s.bulkUpdate(ids, { project_id: e.target.value === NONE ? null : e.target.value })}>
           <option value="">Move to…</option>
           {s.data.projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+          <option value={NONE}>No project</option>
         </select>
       </label>
 

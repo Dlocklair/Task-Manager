@@ -1,9 +1,10 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import type { Api, Data, ListConfig, Note, Person, Priority, Project, Status, Task, View } from "./types";
+import type { Api, ContextDef, Data, ListConfig, Note, Person, Priority, Project, ShareLink, Status, Task, View } from "./types";
 import { COLORS, isoDay, uid } from "./util";
 
 interface NewTask {
-  project_id: string;
+  /** null = no project */
+  project_id: string | null;
   title: string;
   parent_task_id?: string | null;
   status?: Status;
@@ -23,6 +24,8 @@ export interface Store {
   selectedId: string | null;
   openTask(id: string | null): void;
   toast(message: string): void;
+  /** Goes up each time fresh data arrives from the server, such as a change made through an update link. */
+  synced: number;
 
   /** Unsaved note text, per task. Kept until the note is added or discarded. */
   drafts: Record<string, string>;
@@ -47,7 +50,7 @@ export interface Store {
   /** Move the selected tasks to become subtasks of parentId. */
   bulkReparent(ids: string[], parentId: string): void;
 
-  project(id: string): Project | undefined;
+  project(id: string | null): Project | undefined;
   task(id: string): Task | undefined;
   kids(id: string): Task[];
   topLevel(projectId: string): Task[];
@@ -62,7 +65,21 @@ export interface Store {
   deleteCategory(id: string): void;
   setWorkspaceDefaults(ids: string[]): void;
   /** People who are assigned to new tasks in this project (project override, else workspace default). */
-  defaultAssigneesFor(projectId: string): Person[];
+  defaultAssigneesFor(projectId: string | null): Person[];
+
+  /** The workspace's contexts, in the order you set. */
+  contexts: ContextDef[];
+  contextLabel(id: string | null): string;
+  /** Replace the list (rename, add, reorder). */
+  setContexts(list: ContextDef[]): void;
+  /** Remove a context. Tasks that had it are left with no context. */
+  removeContext(id: string): void;
+
+  /** The update link for a person, if one has been made. */
+  shareLinkFor(personId: string): ShareLink | undefined;
+  shareUrl(link: ShareLink): string;
+  createShareLink(personId: string): Promise<ShareLink | null>;
+  removeShareLink(personId: string): void;
   deleteProject(id: string): void;
   addTask(input: NewTask): string;
   updateTask(id: string, patch: Partial<Pick<Task, "title" | "description" | "status" | "priority" | "context" | "due_date" | "due_time" | "remind_before_minutes" | "project_id" | "position">>): void;
@@ -107,6 +124,7 @@ function descendants(tasks: Task[], id: string): Set<string> {
 export function StoreProvider({ api, children }: { api: Api; children: ReactNode }) {
   const [data, setData] = useState<Data | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [synced, setSynced] = useState(0);
   const [view, setView] = useState<View>({ kind: "home" });
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
@@ -125,6 +143,7 @@ export function StoreProvider({ api, children }: { api: Api; children: ReactNode
   const reload = useCallback(async () => {
     try {
       setData(await api.load());
+      setSynced((n) => n + 1);
       setError(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not load your tasks.");
@@ -161,7 +180,7 @@ export function StoreProvider({ api, children }: { api: Api; children: ReactNode
     for (const t of data.tasks) {
       const key = t.parent_task_id;
       const map = key ? byParent : top;
-      const k = key ?? t.project_id;
+      const k = key ?? t.project_id ?? "";
       const list = map.get(k);
       if (list) list.push(t);
       else map.set(k, [t]);
@@ -180,8 +199,8 @@ export function StoreProvider({ api, children }: { api: Api; children: ReactNode
         return next;
       });
     const validPeople = new Set(data.people.map((p) => p.id));
-    const defaultIdsFor = (projectId: string): string[] => {
-      const project = data.projects.find((p) => p.id === projectId);
+    const defaultIdsFor = (projectId: string | null): string[] => {
+      const project = projectId ? data.projects.find((p) => p.id === projectId) : undefined;
       return (project?.default_assignee_ids ?? data.workspace.default_assignee_ids).filter((id) => validPeople.has(id));
     };
 
@@ -189,7 +208,8 @@ export function StoreProvider({ api, children }: { api: Api; children: ReactNode
       // A task without a due date cannot have a time or a reminder.
       const patch: TaskPatch = rawPatch.due_date === null ? { ...rawPatch, due_time: null, remind_before_minutes: null } : rawPatch;
       mut((d) => {
-        const moving = patch.project_id ? descendants(d.tasks, id) : null;
+        const movesProject = "project_id" in patch;
+        const moving = movesProject ? descendants(d.tasks, id) : null;
         return {
           ...d,
           tasks: d.tasks.map((t) => {
@@ -197,16 +217,16 @@ export function StoreProvider({ api, children }: { api: Api; children: ReactNode
               const next = { ...t, ...patch };
               if (patch.status) next.completed_at = patch.status === "done" ? (t.completed_at ?? new Date().toISOString()) : null;
               // A subtask moved to another project becomes a task of its own there.
-              if (patch.project_id && patch.project_id !== t.project_id) next.parent_task_id = null;
+              if (movesProject && patch.project_id !== t.project_id) next.parent_task_id = null;
               return next;
             }
-            return moving?.has(t.id) ? { ...t, project_id: patch.project_id! } : t;
+            return moving?.has(t.id) ? { ...t, project_id: patch.project_id ?? null } : t;
           }),
         };
       });
       const current = tasks.get(id);
       const remote: Record<string, unknown> = { ...patch };
-      if (patch.project_id && current && patch.project_id !== current.project_id && current.parent_task_id) remote.parent_task_id = null;
+      if ("project_id" in patch && current && patch.project_id !== current.project_id && current.parent_task_id) remote.parent_task_id = null;
       save(api.update("tasks", id, remote));
     };
 
@@ -232,6 +252,7 @@ export function StoreProvider({ api, children }: { api: Api; children: ReactNode
         else setSelectedId(id);
       },
       toast,
+      synced,
 
       drafts,
       setDraft: (taskId, text) =>
@@ -330,7 +351,7 @@ export function StoreProvider({ api, children }: { api: Api; children: ReactNode
         );
       },
 
-      project: (id) => data.projects.find((p) => p.id === id),
+      project: (id) => (id ? data.projects.find((p) => p.id === id) : undefined),
       task: (id) => tasks.get(id),
       kids: (id) => byParent.get(id) ?? [],
       topLevel: (projectId) => top.get(projectId) ?? [],
@@ -378,6 +399,41 @@ export function StoreProvider({ api, children }: { api: Api; children: ReactNode
         mut((d) => ({ ...d, workspace: { ...d.workspace, default_assignee_ids: ids } }));
         save(api.update("workspaces", data.workspace.id, { default_assignee_ids: ids }));
       },
+      contexts: data.workspace.contexts,
+      contextLabel: (id) => (id ? (data.workspace.contexts.find((c) => c.id === id)?.label ?? "Removed context") : "No context"),
+      setContexts: (list) => {
+        const clean = list.map((c) => ({ id: c.id, label: c.label.trim() })).filter((c) => c.label);
+        mut((d) => ({ ...d, workspace: { ...d.workspace, contexts: clean } }));
+        save(api.update("workspaces", data.workspace.id, { contexts: clean }));
+      },
+      removeContext: (id) => {
+        const clean = data.workspace.contexts.filter((c) => c.id !== id);
+        const affected = data.tasks.filter((t) => t.context === id).map((t) => t.id);
+        mut((d) => ({ ...d, workspace: { ...d.workspace, contexts: clean }, tasks: d.tasks.map((t) => (t.context === id ? { ...t, context: null } : t)) }));
+        save(api.update("workspaces", data.workspace.id, { contexts: clean }));
+        affected.forEach((tid) => save(api.update("tasks", tid, { context: null })));
+      },
+
+      shareLinkFor: (personId) => data.shareLinks.find((l) => l.person_id === personId),
+      shareUrl: (link) => `${window.location.origin}${window.location.pathname}?update=${link.token}`,
+      createShareLink: async (personId) => {
+        if (!api.createShareLink) return null;
+        try {
+          const link = await api.createShareLink(data.workspace.id, personId);
+          mut((d) => ({ ...d, shareLinks: [...d.shareLinks.filter((l) => l.person_id !== personId), link] }));
+          return link;
+        } catch (e) {
+          toast(`The link was not made. ${e instanceof Error ? e.message : ""}`.trim());
+          return null;
+        }
+      },
+      removeShareLink: (personId) => {
+        const link = data.shareLinks.find((l) => l.person_id === personId);
+        if (!link || !api.removeShareLink) return;
+        mut((d) => ({ ...d, shareLinks: d.shareLinks.filter((l) => l.person_id !== personId) }));
+        save(api.removeShareLink(link.token));
+      },
+
       deleteProject: (id) => {
         mut((d) => ({ ...d, projects: d.projects.filter((p) => p.id !== id), tasks: d.tasks.filter((t) => t.project_id !== id) }));
         save(api.remove("projects", id));
@@ -386,19 +442,21 @@ export function StoreProvider({ api, children }: { api: Api; children: ReactNode
       addTask: (input) => {
         const row = {
           id: uid(),
+          // Sent so a task with no project still lands in your workspace. The database fills it from the project otherwise.
+          workspace_id: data.workspace.id,
           project_id: input.project_id,
           parent_task_id: input.parent_task_id ?? null,
           title: input.title,
           status: input.status ?? ("todo" as Status),
           // New tasks take the project's default priority unless one is given.
-          priority: input.priority ?? data.projects.find((p) => p.id === input.project_id)?.default_priority ?? ("medium" as Priority),
+          priority: input.priority ?? (input.project_id ? data.projects.find((p) => p.id === input.project_id)?.default_priority : undefined) ?? ("medium" as Priority),
           due_date: input.due_date ?? null,
           due_time: null,
           remind_before_minutes: null,
           position: nextPos(),
         };
         const now = new Date().toISOString();
-        const local: Task = { ...row, context: null, workspace_id: data.workspace.id, description: null, completed_at: row.status === "done" ? now : null, created_at: now };
+        const local: Task = { ...row, context: null, description: null, completed_at: row.status === "done" ? now : null, created_at: now };
         // New tasks start with the project's default assignees (or the workspace's), plus you if asked.
         const assignIds = [...new Set([...defaultIdsFor(input.project_id), ...(input.assignMe && me ? [me.id] : [])])];
         mut((d) => ({
@@ -455,7 +513,7 @@ export function StoreProvider({ api, children }: { api: Api; children: ReactNode
         save(api.remove("saved_filters", id));
       },
     };
-  }, [api, data, view, selectedId, toast, reload, drafts, selection, selecting, pendingLeave]);
+  }, [api, data, synced, view, selectedId, toast, reload, drafts, selection, selecting, pendingLeave]);
 
   if (error && !store) {
     return (

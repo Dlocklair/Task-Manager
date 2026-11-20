@@ -15,16 +15,26 @@ import { applySavedTweaks, TweaksPanel, tweaksEnabled } from "./components/Tweak
 import { TaskDetail } from "./components/TaskDetail";
 import { Home, MyTasks, People, Projects } from "./components/views";
 import { AllTasks } from "./components/AllTasks";
+import { SettingsPage } from "./components/Settings";
+import { SharedTasks } from "./components/SharedTasks";
 import { NewTaskContext } from "./components/TopActions";
 
 applySavedTweaks();
 
-const demo = !sb || new URLSearchParams(window.location.search).has("demo");
+const params = new URLSearchParams(window.location.search);
+const demo = !sb || params.has("demo");
+/** An update link: someone you assigned tasks to, opening their tasks with no account. */
+const updateToken = params.get("update");
 const DEVICE_KEY = "task-manager-device-mode";
 // Device-only mode is off unless VITE_DEVICE_MODE=1 is set at build time. Beta testers use the cloud version.
 const deviceEnabled = import.meta.env.VITE_DEVICE_MODE === "1";
 
 export default function App() {
+  if (updateToken) return <SharedTasks token={updateToken} />;
+  return <MainApp />;
+}
+
+function MainApp() {
   const [session, setSession] = useState<Session | null | undefined>(demo ? null : undefined);
   const [device, setDevice] = useState(() => deviceEnabled && localStorage.getItem(DEVICE_KEY) === "1");
 
@@ -72,6 +82,7 @@ function Workspace({ onSignOut }: { onSignOut?: () => void }) {
         {s.view.kind === "all" && <AllTasks />}
         {s.view.kind === "my" && <MyTasks />}
         {s.view.kind === "people" && <People />}
+        {s.view.kind === "settings" && <SettingsPage onSignOut={onSignOut} />}
         {s.view.kind === "project" && (project ? <ProjectView key={project.id} project={project} onEdit={() => setProjectDialog({ project })} /> : <Home onNewProject={newProject} />)}
         </NewTaskContext.Provider>
       </main>

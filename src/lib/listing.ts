@@ -1,6 +1,6 @@
-import type { GroupKey, ListConfig, Person, Priority, Project, SortKey, Task } from "./types";
+import type { ContextDef, GroupKey, ListConfig, Person, Priority, Project, SortKey, Task } from "./types";
 import type { ReorderMode } from "./drag";
-import { addDays, CONTEXTS, isoDay, PRIORITIES, sortCompare, STATUSES, step } from "./util";
+import { addDays, isoDay, PRIORITIES, sortCompare, STATUSES, step } from "./util";
 
 export const DEFAULT_CONFIG: ListConfig = {
   who: "all",
@@ -22,9 +22,12 @@ export const SORT_OPTIONS: { id: SortKey; label: string }[] = [
   { id: "manual", label: "My order (drag)" },
 ];
 
-/** Dragging is on when sorted by priority or by your own order. It changes nothing in other sorts. */
+/**
+ * Dragging is only on when sorted by My order. Moving a task changes its place in the list and nothing else:
+ * its priority and status stay as they are.
+ */
 export function reorderMode(sortBy: SortKey): ReorderMode | null {
-  return sortBy === "priority" ? "priority" : sortBy === "manual" ? "manual" : null;
+  return sortBy === "manual" ? "manual" : null;
 }
 
 export const GROUP_OPTIONS: { id: GroupKey; label: string }[] = [
@@ -52,6 +55,8 @@ export interface Section {
 export interface ListContext {
   people: Person[];
   projects: Project[];
+  /** The workspace's contexts, for labels. Optional where no labels are shown. */
+  contexts?: ContextDef[];
   /** People assigned to a task. */
   assigned(taskId: string): Person[];
 }
@@ -90,11 +95,20 @@ export function applyFilters(tasks: Task[], cfg: ListConfig, ctx: ListContext, s
     }
     if (cfg.priority !== "all" && t.priority !== cfg.priority) return false;
     if (cfg.context !== "all" && (t.context ?? "none") !== cfg.context) return false;
-    if (cfg.project !== "all" && t.project_id !== cfg.project) return false;
+    if (cfg.project !== "all" && (t.project_id ?? "none") !== cfg.project) return false;
     if (cfg.who === "all") return true;
     const people = ctx.assigned(t.id);
     return cfg.who === "none" ? people.length === 0 : people.some((p) => p.id === cfg.who);
   });
+}
+
+/**
+ * The second number in "Showing X of Y". With Hide completed on, finished tasks are not counted,
+ * so the count reads 40 of 40 rather than 40 of 49. With it off (or while searching closed tasks) every task counts.
+ */
+export function countTotal(tasks: Task[], cfg: ListConfig, search: TextSearch = NO_SEARCH): number {
+  const searchingClosed = search.q.trim().length > 0 && search.includeClosed;
+  return cfg.hideDone && !searchingClosed ? tasks.filter((t) => t.status !== "done").length : tasks.length;
 }
 
 function dueBucket(t: Task): { key: string; title: string } {
@@ -167,6 +181,7 @@ export function groupTasks(tasks: Task[], cfg: ListConfig, ctx: ListContext): Se
       for (const p of ctx.projects) {
         out.push(build(p.id, p.name, sorted.filter((t) => t.project_id === p.id), { color: p.color }));
       }
+      out.push(build("none", "No project", sorted.filter((t) => !t.project_id || !ctx.projects.some((p) => p.id === t.project_id))));
       break;
   }
   return out.filter((s): s is Section => s !== null);
@@ -223,8 +238,8 @@ export function activeFilters(cfg: ListConfig, base: ListConfig, ctx: ListContex
     out.push(`Assigned to: ${name}`);
   }
   if (cfg.priority !== base.priority) out.push(`Priority: ${PRIORITIES.find((p) => p.id === cfg.priority)?.label ?? cfg.priority}`);
-  if (cfg.context !== base.context) out.push(`Context: ${cfg.context === "none" ? "No context" : (CONTEXTS.find((c) => c.id === cfg.context)?.label ?? cfg.context)}`);
-  if (cfg.project !== base.project) out.push(`Project: ${ctx.projects.find((p) => p.id === cfg.project)?.name ?? "Unknown"}`);
+  if (cfg.context !== base.context) out.push(`Context: ${cfg.context === "none" ? "No context" : (ctx.contexts?.find((c) => c.id === cfg.context)?.label ?? "Removed context")}`);
+  if (cfg.project !== base.project) out.push(`Project: ${cfg.project === "none" ? "No project" : (ctx.projects.find((p) => p.id === cfg.project)?.name ?? "Unknown")}`);
   if (cfg.groupBy !== base.groupBy) out.push(`Grouped by: ${GROUP_OPTIONS.find((g) => g.id === cfg.groupBy)?.label ?? cfg.groupBy}`);
   if (cfg.sortBy !== base.sortBy) out.push(`Sorted by: ${SORT_OPTIONS.find((o) => o.id === cfg.sortBy)?.label ?? cfg.sortBy}`);
   if (search.q.trim()) out.push(`Search: "${search.q.trim()}"${search.includeClosed ? " (including closed)" : ""}`);

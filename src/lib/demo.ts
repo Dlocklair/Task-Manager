@@ -1,5 +1,5 @@
 import type { Api, Data, Note, Person, Project, Task, TaskContext } from "./types";
-import { addDays, COLORS } from "./util";
+import { addDays, COLORS, DEFAULT_CONTEXTS } from "./util";
 
 // Sample data for looking around without an account. Nothing is saved.
 const WS = "demo-workspace";
@@ -76,12 +76,13 @@ function build(): Data {
   add("pr-taxes", "Gather the 1099s", "todo", 20, "none", ["p-me"]);
   add("pr-taxes", "Send receipts to the accountant", "todo", null, "low", ["p-me"]);
 
-  return { userId: "demo-user", email: "demo@example.com", workspace: { id: WS, name: "Demo workspace", default_assignee_ids: [] }, projects, tasks, people, assignees, savedFilters: [], categories };
+  return { userId: "demo-user", email: "demo@example.com", workspace: { id: WS, name: "Demo workspace", default_assignee_ids: [], contexts: DEFAULT_CONTEXTS }, projects, tasks, people, assignees, savedFilters: [], categories, shareLinks: [] };
 }
 
 const demoNotes: Record<string, Note[]> = {
   "t-1": [
     { id: "n-1", task_id: "t-1", author_id: "demo-user", body: "Showroom says six weeks lead time once the deposit is in.", created_at: new Date(Date.now() - 3 * 864e5).toISOString() },
+    { id: "n-2", task_id: "t-1", author_id: null, author_name: "Maria Chen", body: "Called the showroom. Deposit is paid.", created_at: new Date(Date.now() - 864e5).toISOString() },
   ],
 };
 

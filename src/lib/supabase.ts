@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
-import type { Api, Data, Note } from "./types";
+import type { Api, Data, Note, ShareLink } from "./types";
+import { DEFAULT_CONTEXTS } from "./util";
 
 const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
 const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined;
@@ -26,26 +27,31 @@ export const supabaseApi: Api = {
     if (!members.length) throw new Error("No workspace was found for this account.");
     const wsId = members[0].workspace_id;
 
-    const [ws, projects, categories, tasks, people, assignees, filters] = await Promise.all([
-      client.from("workspaces").select("id,name,default_assignee_ids").eq("id", wsId).single(),
+    const [ws, projects, categories, tasks, people, assignees, filters, links] = await Promise.all([
+      client.from("workspaces").select("id,name,default_assignee_ids,contexts").eq("id", wsId).single(),
       client.from("projects").select("id,workspace_id,name,description,color,position,default_priority,default_assignee_ids,category_id,created_at").eq("workspace_id", wsId).neq("status", "archived").order("position"),
       client.from("categories").select("id,workspace_id,name,created_at").eq("workspace_id", wsId).order("created_at"),
       client.from("tasks").select("id,workspace_id,project_id,parent_task_id,title,description,status,priority,context,due_date,due_time,remind_before_minutes,position,completed_at,created_at").eq("workspace_id", wsId).order("position").limit(5000),
       client.from("people").select("id,workspace_id,user_id,full_name,email,color").eq("workspace_id", wsId).eq("is_archived", false).order("created_at"),
       client.from("task_assignees").select("task_id,person_id").limit(10000),
       client.from("saved_filters").select("id,workspace_id,owner_id,name,scope,config,created_at").eq("workspace_id", wsId).order("created_at"),
+      client.from("share_links").select("token,person_id").eq("workspace_id", wsId),
     ]);
+    const workspace = check(ws) as Data["workspace"];
+    if (!Array.isArray(workspace.contexts)) workspace.contexts = DEFAULT_CONTEXTS;
 
     return {
       userId: user.id,
       email: user.email ?? "",
-      workspace: check(ws) as Data["workspace"],
+      workspace,
       projects: check(projects) as Data["projects"],
       categories: check(categories) as Data["categories"],
       tasks: check(tasks) as Data["tasks"],
       people: check(people) as Data["people"],
       assignees: check(assignees) as Data["assignees"],
       savedFilters: check(filters) as Data["savedFilters"],
+      // Older databases without update links still load.
+      shareLinks: links.error ? [] : (links.data as ShareLink[]),
     };
   },
 
@@ -64,8 +70,16 @@ export const supabaseApi: Api = {
   },
   async notes(taskId) {
     return check(
-      await sb!.from("task_comments").select("id,task_id,author_id,body,created_at,updated_at").eq("task_id", taskId).order("created_at"),
+      await sb!.from("task_comments").select("id,task_id,author_id,author_name,body,created_at,updated_at").eq("task_id", taskId).order("created_at"),
     ) as Note[];
+  },
+  async createShareLink(workspaceId, personId) {
+    return check(
+      await sb!.from("share_links").insert({ person_id: personId, workspace_id: workspaceId }).select("token,person_id").single(),
+    ) as ShareLink;
+  },
+  async removeShareLink(token) {
+    check(await sb!.from("share_links").delete().eq("token", token));
   },
   subscribe(onChange) {
     const client = sb!;
