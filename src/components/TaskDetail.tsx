@@ -5,6 +5,7 @@ import type { Task } from "../lib/types";
 import { step, tint } from "../lib/util";
 import { RichField } from "./RichText";
 import { Notes } from "./Notes";
+import { firstLine, Fold } from "./Fold";
 import { QuickAdd } from "./TaskList";
 import { Check } from "./ui";
 import { Subtasks } from "./Subtasks";
@@ -73,17 +74,20 @@ export function TaskDetail({ task }: { task: Task }) {
 
         <TaskFields task={task} />
 
-        <section className="detail-section">
-          <h3>Details</h3>
-          <RichField
-            value={task.description ?? ""}
-            label="details"
-            placeholder="Add details, bullets or steps"
-            onSave={(v) => s.updateTask(task.id, { description: v })}
-          />
-        </section>
-
-        <Notes taskId={task.id} />
+        <div className="folds">
+          <Fold title="Details" preview={firstLine(task.description)} empty="Nothing added yet">
+            {(byClick) => (
+              <RichField
+                value={task.description ?? ""}
+                label="details"
+                placeholder="Add details, bullets or steps"
+                startEditing={byClick}
+                onSave={(v) => s.updateTask(task.id, { description: v })}
+              />
+            )}
+          </Fold>
+          <Notes taskId={task.id} />
+        </div>
 
         <section className="detail-section">
           <h3>Subtasks{kids.length > 0 && <span className="count">{doneKids} of {kids.length} done</span>}</h3>

@@ -2,8 +2,9 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useStore } from "../lib/store";
 import type { Note } from "../lib/types";
 import { RichEditor, RichView } from "./RichText";
+import { firstLine, Fold } from "./Fold";
 
-/** A task's notes. compact is the smaller version shown inside an opened subtask. */
+/** A task's notes, folded until opened. compact is the smaller version shown inside an opened subtask. */
 export function Notes({ taskId, compact = false }: { taskId: string; compact?: boolean }) {
   const s = useStore();
   const [notes, setNotes] = useState<Note[] | null>(null);
@@ -37,36 +38,47 @@ export function Notes({ taskId, compact = false }: { taskId: string; compact?: b
     s.api.remove("task_comments", id).catch(() => s.toast("That note was not deleted."));
   };
 
+  const list = notes ?? [];
+  const latest = list[list.length - 1];
   return (
-    <section className={compact ? "subtask-notes" : "detail-section"}>
-      {compact ? (
-        <span className="subtask-label">Notes{notes && notes.length > 0 && <span className="count">{notes.length}</span>}</span>
-      ) : (
-        <h3>Notes{notes && notes.length > 0 && <span className="count">{notes.length}</span>}</h3>
+    <Fold
+      title="Notes"
+      count={list.length}
+      preview={latest ? firstLine(latest.body) : ""}
+      empty="No notes yet"
+      open={!!body.trim()}
+      compact={compact}
+    >
+      {(byClick) => (
+        <>
+          {body.trim() && <p className="draft-warning" role="status">This note is not added yet. Press Add note to save it.</p>}
+          {list.length > 0 && (
+            <div className="notes">
+              {list.map((n) => (
+                <NoteItem key={n.id} note={n} mine={n.author_id === s.data.userId} onEdit={(text) => edit(n.id, text)} onDelete={() => remove(n.id)} />
+              ))}
+            </div>
+          )}
+          <form className="note-form" onSubmit={add}>
+            <RichEditor
+              value={body}
+              onChange={setBody}
+              rows={compact ? 2 : 3}
+              autoFocus={byClick && list.length === 0}
+              placeholder={compact ? "Add a note to this subtask" : "Write a note. Use the list buttons for bullets or numbers."}
+              ariaLabel="Write a note"
+              onKeyDown={(e) => {
+                if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+                  e.preventDefault();
+                  add(e as unknown as FormEvent);
+                }
+              }}
+            />
+            <button className={"btn primary" + (compact ? " small" : "")} type="submit" disabled={!body.trim()}>Add note</button>
+          </form>
+        </>
       )}
-      {body.trim() && <p className="draft-warning" role="status">This note is not added yet. Press Add note to save it.</p>}
-      <div className="notes">
-        {(notes ?? []).map((n) => (
-          <NoteItem key={n.id} note={n} mine={n.author_id === s.data.userId} onEdit={(text) => edit(n.id, text)} onDelete={() => remove(n.id)} />
-        ))}
-      </div>
-      <form className="note-form" onSubmit={add}>
-        <RichEditor
-          value={body}
-          onChange={setBody}
-          rows={compact ? 2 : 3}
-          placeholder={compact ? "Add a note to this subtask" : "Write a note. Use the list buttons for bullets or numbers."}
-          ariaLabel="Write a note"
-          onKeyDown={(e) => {
-            if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
-              e.preventDefault();
-              add(e as unknown as FormEvent);
-            }
-          }}
-        />
-        <button className={"btn primary" + (compact ? " small" : "")} type="submit" disabled={!body.trim()}>Add note</button>
-      </form>
-    </section>
+    </Fold>
   );
 }
 

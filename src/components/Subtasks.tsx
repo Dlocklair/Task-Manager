@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ArrowDown, ArrowUp, ChevronRight, ExternalLink, FolderInput, GripVertical } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronRight, ExternalLink, FolderInput, GripVertical, Trash2 } from "lucide-react";
 import { useStore } from "../lib/store";
 import type { Task } from "../lib/types";
 import { beginDrag, kidsScope, placeBetween, type ReorderScope } from "../lib/drag";
@@ -9,11 +9,13 @@ import { RichField } from "./RichText";
 import { TaskFields } from "./TaskFields";
 import { Notes } from "./Notes";
 import { ParentPicker } from "./ParentPicker";
+import { firstLine, Fold } from "./Fold";
 
 /**
  * A task's subtasks. Each shows one tidy line: tick box, name, and the key facts that are set.
  * The arrow opens that subtask to edit every field a task has, plus its own notes.
  * Drag the grip to put them in any order (the order is saved), or onto another task in the list to move it there.
+ * The bin deletes just that subtask (and anything under it), leaving the parent and the other subtasks alone.
  */
 export function Subtasks({ parentId, kids }: { parentId: string; kids: Task[] }) {
   const scope: ReorderScope = { key: kidsScope(parentId), list: kids };
@@ -30,6 +32,14 @@ function SubtaskItem({ task, scope, index }: { task: Task; scope: ReorderScope; 
   const [picking, setPicking] = useState(false);
   const siblings = scope.list;
   const done = task.status === "done";
+
+  const remove = () => {
+    const below = s.kids(task.id).length;
+    const extra = below ? ` and the ${below} subtask${below > 1 ? "s" : ""} under it` : "";
+    if (!window.confirm(`Delete the subtask "${task.title}"${extra}? This can't be undone.`)) return;
+    s.deleteTask(task.id);
+    s.toast(`Subtask "${task.title}" deleted.`);
+  };
 
   const moveTo = (target: Task, where: "before" | "after") => s.updateTask(task.id, { position: placeBetween(siblings, task.id, target, where) });
 
@@ -59,15 +69,19 @@ function SubtaskItem({ task, scope, index }: { task: Task; scope: ReorderScope; 
         >
           <ChevronRight size={16} />
         </button>
+        <button className="sub-del" aria-label={`Delete subtask ${task.title}`} title="Delete this subtask" onClick={remove}>
+          <Trash2 size={15} />
+        </button>
       </div>
 
       {open && (
         <div className="subtask-more">
           <TaskFields task={task} compact />
-          <div className="subtask-details">
-            <span className="subtask-label">Details</span>
-            <RichField value={task.description ?? ""} label="details" placeholder="Add details, bullets or steps" onSave={(v) => s.updateTask(task.id, { description: v })} />
-          </div>
+          <Fold title="Details" preview={firstLine(task.description)} empty="Nothing added yet" compact>
+            {(byClick) => (
+              <RichField value={task.description ?? ""} label="details" placeholder="Add details, bullets or steps" startEditing={byClick} onSave={(v) => s.updateTask(task.id, { description: v })} />
+            )}
+          </Fold>
           <Notes taskId={task.id} compact />
           <div className="subtask-actions">
             {/* Up and down buttons do what dragging does, for keyboards and small screens. */}
@@ -76,6 +90,7 @@ function SubtaskItem({ task, scope, index }: { task: Task; scope: ReorderScope; 
             <button className="btn small" onClick={() => setPicking(true)}><FolderInput size={14} />Move to another task</button>
             <span className="grow" />
             <button className="btn small" onClick={() => s.openTask(task.id)}><ExternalLink size={14} />Open as a task</button>
+            <button className="btn small danger" onClick={remove}><Trash2 size={14} />Delete subtask</button>
           </div>
         </div>
       )}
