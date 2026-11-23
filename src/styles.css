@@ -940,3 +940,71 @@ body.has-bulk .main { padding-bottom: 96px; }
 .setup-text h2 em { font-style: normal; font-size: 12px; font-weight: 600; color: var(--ink-3); border: 1px solid var(--line); border-radius: 99px; padding: 1px 8px; }
 .setup-text p { color: var(--ink-2); line-height: 1.5; margin: 0 0 10px; font-size: 14.5px; }
 .setup-foot { margin-top: 16px; }
+
+/* Drag and drop (pointer based, so it works with a finger on iPad as well as a mouse) */
+.is-dragging, .is-dragging * { cursor: grabbing !important; user-select: none !important; -webkit-user-select: none !important; }
+.drag-ghost { position: fixed; left: 0; top: 0; z-index: 1000; pointer-events: none; max-width: 280px; padding: 7px 12px; border-radius: 8px; background: var(--ink, #1d2433); color: #fff; font-weight: 600; font-size: 14px; box-shadow: 0 8px 24px rgb(15 23 42 / 0.25); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: 0.94; }
+.subtask-head.drop-before { box-shadow: inset 0 2px 0 var(--primary); }
+.subtask-head.drop-after { box-shadow: inset 0 -2px 0 var(--primary); }
+.row.drop-into, .subtask-head.drop-into { background: var(--primary-soft); box-shadow: inset 0 0 0 2px var(--primary); border-radius: 6px; }
+
+/* Where a subtask sits, in search results */
+.row-path { display: flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 500; color: var(--ink-3); margin-bottom: 1px; overflow-wrap: anywhere; }
+.row-path svg { flex: none; }
+.row.has-path .row-title { display: flex; flex-direction: column; }
+
+/* The tasks above an open subtask */
+.lineage { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; padding: 8px 10px; border-radius: var(--r-sm); background: #f6f8fc; border: 1px solid var(--line); font-size: 13px; }
+.lineage-label { display: inline-flex; align-items: center; gap: 5px; color: var(--ink-3); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; }
+.lineage ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 3px; }
+.lineage li { display: flex; align-items: center; gap: 5px; color: var(--ink-3); }
+.lineage li button { color: var(--ink-2); font-weight: 500; text-align: left; overflow-wrap: anywhere; }
+.lineage li button:hover { color: var(--primary-dark); text-decoration: underline; }
+.lineage li.here span { color: var(--ink); font-weight: 600; overflow-wrap: anywhere; }
+
+/* Subtask notes */
+.subtask-label { color: var(--ink-2); font-size: 13px; font-weight: 500; display: flex; gap: 8px; align-items: baseline; }
+.subtask-label .count { color: var(--ink-3); font-size: 12px; }
+.subtask-notes { display: flex; flex-direction: column; gap: 6px; }
+.subtask-notes .notes { gap: 6px; }
+.subtask-notes .note { background: #fff; }
+
+/* Print buttons */
+.view-count { display: inline-flex; align-items: center; gap: 10px; }
+.print-btn { display: inline-flex; align-items: center; gap: 5px; }
+.my-sort .print-btn { margin-left: auto; }
+
+/* Sidebar Projects heading when it folds */
+.side-fold-row { display: flex; align-items: center; gap: 4px; margin-top: 18px; }
+.side-fold-row .side-fold { flex: 1; min-width: 0; }
+
+/* Printing: only the print sheet appears on paper */
+#print-sheet { display: none; }
+@media print {
+  html.printing body > *:not(#print-sheet) { display: none !important; }
+  html.printing #print-sheet { display: block; }
+  html.printing, html.printing body { background: #fff !important; height: auto !important; overflow: visible !important; }
+}
+#print-sheet { font: 11pt/1.4 var(--body, system-ui, sans-serif); color: #111; }
+#print-sheet .ps-head { border-bottom: 2px solid #111; padding-bottom: 6px; margin-bottom: 12px; }
+#print-sheet h1 { font-size: 18pt; margin: 0 0 2px; }
+#print-sheet .ps-head p { margin: 0; color: #444; font-size: 10pt; }
+#print-sheet .ps-filters { margin-top: 3px !important; }
+#print-sheet h2 { font-size: 12pt; margin: 14px 0 4px; padding-bottom: 2px; border-bottom: 1px solid #bbb; break-after: avoid; }
+#print-sheet h2 span { color: #666; font-weight: 500; font-size: 10pt; }
+#print-sheet ol, #print-sheet ul { list-style: none; margin: 0; padding: 0; }
+#print-sheet .ps-task { padding: 6px 0; border-bottom: 1px solid #e2e2e2; break-inside: avoid; }
+#print-sheet .ps-line { display: flex; gap: 8px; }
+#print-sheet .ps-box { font-size: 13pt; line-height: 1.1; flex: none; }
+#print-sheet .ps-title { font-weight: 600; }
+#print-sheet .ps-path { font-weight: 400; color: #666; }
+#print-sheet .done .ps-title, #print-sheet .ps-sub.done > .ps-sub-title { text-decoration: line-through; color: #666; }
+#print-sheet .ps-facts { color: #444; font-size: 9.5pt; }
+#print-sheet .ps-details { margin-top: 3px; font-size: 10pt; color: #222; }
+#print-sheet .ps-mark { display: inline-block; min-width: 16px; }
+#print-sheet .ps-subs { margin-top: 4px; }
+#print-sheet .ps-sub { font-size: 10pt; padding: 1px 0; }
+#print-sheet .ps-sub ul { padding-left: 18px; }
+#print-sheet .ps-sub .ps-box { font-size: 11pt; margin-right: 5px; }
+#print-sheet .ps-sub-facts { color: #555; font-size: 9pt; margin-left: 8px; }
+.grip { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }

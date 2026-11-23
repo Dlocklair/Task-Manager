@@ -21,7 +21,6 @@ export const NEW_CATEGORY = "__new__";
 export function Sidebar({ onNewProject, onSignOut }: { onNewProject(): void; onSignOut?: () => void }) {
   const s = useStore();
   const [managing, setManaging] = useState(false);
-  const groups = groupProjects(s.data.projects, s.data.categories);
   const myOpen = s.me ? s.tasksFor(s.me.id).filter((t) => t.status !== "done").length : 0;
   return (
     <nav className="side" aria-label="Main">
@@ -37,35 +36,7 @@ export function Sidebar({ onNewProject, onSignOut }: { onNewProject(): void; onS
 
       <SavedFilterLinks />
 
-      <div className="side-label">
-        Projects
-        <span className="side-label-actions">
-          <button className="side-text-btn" onClick={() => setManaging(true)}><Tags size={14} />Categories</button>
-          <button className="icon-btn on-dark" onClick={onNewProject} aria-label="New project"><Plus size={16} /></button>
-        </span>
-      </div>
-      <div className="side-projects">
-        {groups.map((group) => (
-          <div key={group.category?.id ?? "none"} className="side-group">
-            {s.data.categories.length > 0 && <div className="side-cat">{group.category?.name ?? "No category"}</div>}
-            <div className={"side-group-items" + (s.data.categories.length > 0 ? " nested" : "")}>
-              {group.projects.map((p) => {
-                const g = s.progress(p.id);
-                const on = s.view.kind === "project" && s.view.id === p.id;
-                return (
-                  <button key={p.id} className={"side-link project" + (on ? " on" : "")} style={tint(p.color)} onClick={() => s.go({ kind: "project", id: p.id })}>
-                    <i />
-                    <span className="grow">{p.name}</span>
-                    <span className="badge quiet">{g.total - g.done}</span>
-                  </button>
-                );
-              })}
-              {group.projects.length === 0 && <p className="side-empty">No projects here yet</p>}
-            </div>
-          </div>
-        ))}
-        {s.data.projects.length === 0 && <p className="side-empty">No projects yet</p>}
-      </div>
+      <SideProjects onNewProject={onNewProject} onManage={() => setManaging(true)} />
       {managing && <CategoryDialog onClose={() => setManaging(false)} />}
 
       <div className="side-foot">
@@ -88,33 +59,104 @@ export function Sidebar({ onNewProject, onSignOut }: { onNewProject(): void; onS
 }
 
 const FILTERS_OPEN_KEY = "tm-side-filters-open";
+const PROJECTS_OPEN_KEY = "tm-side-projects-open";
 
-/**
- * Saved filters, so you can jump straight to one. Up to three sit in the menu as they are;
- * with more than three they fold under a Filters heading you can open and close.
- */
-function SavedFilterLinks() {
-  const s = useStore();
+/** Open or closed, remembered on this device. */
+function useFold(key: string, fallback: boolean): [boolean, () => void] {
   const [open, setOpen] = useState(() => {
     try {
-      return localStorage.getItem(FILTERS_OPEN_KEY) === "1";
+      const v = localStorage.getItem(key);
+      return v === null ? fallback : v === "1";
     } catch {
-      return false;
+      return fallback;
     }
   });
-  // A filter saved on a project that has since been deleted has nowhere to open.
-  const filters = s.data.savedFilters.filter((f) => f.scope === "all" || s.project(f.scope));
-  if (filters.length === 0) return null;
-  const current = "filterId" in s.view ? s.view.filterId : undefined;
   const toggle = () => {
     const next = !open;
     setOpen(next);
     try {
-      localStorage.setItem(FILTERS_OPEN_KEY, next ? "1" : "0");
+      localStorage.setItem(key, next ? "1" : "0");
     } catch {
       /* remembering is only a convenience */
     }
   };
+  return [open, toggle];
+}
+
+/**
+ * Projects in the sidebar. Up to three are listed as they are. With more than three they gather under
+ * a Projects heading you open and close. Categories and New project stay on the heading either way.
+ */
+function SideProjects({ onNewProject, onManage }: { onNewProject(): void; onManage(): void }) {
+  const s = useStore();
+  const groups = groupProjects(s.data.projects, s.data.categories);
+  const folds = s.data.projects.length > 3;
+  const [openPref, toggle] = useFold(PROJECTS_OPEN_KEY, false);
+  const open = !folds || openPref;
+  const actions = (
+    <span className="side-label-actions">
+      {folds ? (
+        <button className="icon-btn on-dark" onClick={onManage} aria-label="Categories" title="Categories"><Tags size={15} /></button>
+      ) : (
+        <button className="side-text-btn" onClick={onManage}><Tags size={14} />Categories</button>
+      )}
+      <button className="icon-btn on-dark" onClick={onNewProject} aria-label="New project"><Plus size={16} /></button>
+    </span>
+  );
+  return (
+    <>
+      {folds ? (
+        <div className="side-fold-row">
+          <button className="side-link side-fold" aria-expanded={open} onClick={toggle}>
+            <FolderKanban size={18} />
+            <span className="grow">Projects</span>
+            <span className="badge quiet">{s.data.projects.length}</span>
+            <ChevronDown size={16} className={"fold-chev" + (open ? " turn" : "")} />
+          </button>
+          {actions}
+        </div>
+      ) : (
+        <div className="side-label">Projects{actions}</div>
+      )}
+      {open && (
+      <div className="side-projects">
+        {groups.map((group) => (
+          <div key={group.category?.id ?? "none"} className="side-group">
+            {s.data.categories.length > 0 && <div className="side-cat">{group.category?.name ?? "No category"}</div>}
+            <div className={"side-group-items" + (s.data.categories.length > 0 ? " nested" : "")}>
+              {group.projects.map((p) => {
+                const g = s.progress(p.id);
+                const on = s.view.kind === "project" && s.view.id === p.id;
+                return (
+                  <button key={p.id} className={"side-link project" + (on ? " on" : "")} style={tint(p.color)} onClick={() => s.go({ kind: "project", id: p.id })}>
+                    <i />
+                    <span className="grow">{p.name}</span>
+                    <span className="badge quiet">{g.total - g.done}</span>
+                  </button>
+                );
+              })}
+              {group.projects.length === 0 && <p className="side-empty">No projects here yet</p>}
+            </div>
+          </div>
+        ))}
+        {s.data.projects.length === 0 && <p className="side-empty">No projects yet</p>}
+      </div>
+      )}
+    </>
+  );
+}
+
+/**
+ * Saved filters, so you can jump straight to one. They sit under a Filters heading you can open and close.
+ * The heading stays open while one of its filters is showing.
+ */
+function SavedFilterLinks() {
+  const s = useStore();
+  const [open, toggle] = useFold(FILTERS_OPEN_KEY, false);
+  // A filter saved on a project that has since been deleted has nowhere to open.
+  const filters = s.data.savedFilters.filter((f) => f.scope === "all" || s.project(f.scope));
+  if (filters.length === 0) return null;
+  const current = "filterId" in s.view ? s.view.filterId : undefined;
   const links = filters.map((f) => {
     const project = f.scope === "all" ? undefined : s.project(f.scope);
     return (
@@ -129,7 +171,6 @@ function SavedFilterLinks() {
       </button>
     );
   });
-  if (filters.length <= 3) return <div className="side-nav side-filters" aria-label="Saved filters">{links}</div>;
   const holdsCurrent = filters.some((f) => f.id === current);
   return (
     <div className="side-filters" aria-label="Saved filters">

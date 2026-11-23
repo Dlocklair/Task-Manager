@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { Bookmark, X } from "lucide-react";
+import { Bookmark, Printer, X } from "lucide-react";
 import { useStore } from "../lib/store";
 import { activeFilters, GROUP_OPTIONS, isChanged, normalise, SORT_OPTIONS, sameConfig, type TextSearch } from "../lib/listing";
 import type { GroupKey, ListConfig } from "../lib/types";
@@ -25,9 +25,11 @@ interface Props {
   showSearch?: boolean;
   shown: number;
   total: number;
+  /** Prints the list as it is shown. Gets the active filters as plain text, and the saved filter's name if one is on. */
+  onPrint?(filters: string[], savedName: string | undefined): void;
 }
 
-export function ListTools({ scope, cfg, base, onChange, search, onSearch, groups, showProject, showSearch = true, shown, total }: Props) {
+export function ListTools({ scope, cfg, base, onChange, search, onSearch, groups, showProject, showSearch = true, shown, total, onPrint }: Props) {
   const s = useStore();
   const [naming, setNaming] = useState(false);
   const [name, setName] = useState("");
@@ -69,7 +71,16 @@ export function ListTools({ scope, cfg, base, onChange, search, onSearch, groups
   );
 
   // On a project page the count sits on the Hide completed line, so Sort by can end the Group/Sort block.
-  const count = <span className="view-count">Showing {shown} of {total}</span>;
+  const count = (
+    <span className="view-count">
+      Showing {shown} of {total}
+      {onPrint && (
+        <button className="btn small print-btn" onClick={() => onPrint(active, applied?.name)} disabled={shown === 0} title="Print this list as it is shown">
+          <Printer size={14} />Print
+        </button>
+      )}
+    </span>
+  );
 
   const hideCompleted = (
     <label className="check-inline">

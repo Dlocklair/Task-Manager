@@ -1,12 +1,13 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Check as CheckIcon, Settings as SettingsIcon } from "lucide-react";
-import { Link2, Mail, Pencil, Plus, Tags, Trash2 } from "lucide-react";
+import { Link2, Mail, Pencil, Plus, Printer, Tags, Trash2 } from "lucide-react";
 import { useStore } from "../lib/store";
 import type { Person, SortKey, Task } from "../lib/types";
-import type { ReorderScope } from "../lib/drag";
+import type { ReorderMode, ReorderScope } from "../lib/drag";
 import { addDays, byDueThenPriority, byUrgency, COLORS, firstName, greeting, isoDay, sortCompare, tint } from "../lib/util";
 import { NO_SEARCH, rememberSort, reorderMode, savedSort, searchTasks, SORT_OPTIONS, type TextSearch } from "../lib/listing";
 import { CategoryDialog } from "./Shell";
+import { printList } from "../lib/print";
 import { buildOutline, type Outline } from "../lib/outline";
 import { EmailDialog } from "./EmailDialog";
 import { TaskRow } from "./TaskList";
@@ -28,14 +29,14 @@ function buckets(tasks: Task[], order: (a: Task, b: Task) => number = byUrgency)
   };
 }
 
-function Section({ title, tone, tasks, mode = null }: { title: string; tone?: string; tasks: Task[]; mode?: ReorderScope["mode"] | null }) {
+function Section({ title, tone, tasks, mode = null }: { title: string; tone?: string; tasks: Task[]; mode?: ReorderMode | null }) {
   if (!tasks.length) return null;
   // Each due-date section is its own group: tasks can be dragged within it, not into another one.
-  const reorder: ReorderScope | undefined = mode ? { list: tasks, mode } : undefined;
+  const reorder: ReorderScope | undefined = mode ? { key: `due:${title}`, list: tasks } : undefined;
   return (
     <section className="group">
       <h2 className={`group-head ${tone ?? ""}`}><i />{title}<span>{tasks.length}</span></h2>
-      <div className="rows">{tasks.map((t) => <TaskRow key={t.id} task={t} showProject reorder={reorder} />)}</div>
+      <div className="rows">{tasks.map((t) => <TaskRow key={t.id} task={t} showProject showPath reorder={reorder} />)}</div>
     </section>
   );
 }
@@ -75,7 +76,7 @@ export function Home({ onNewProject }: { onNewProject(): void }) {
         found.length ? (
           <>
             <p className="search-count">{found.length} {found.length === 1 ? "match" : "matches"}{search.includeClosed ? ", closed tasks included" : ", open tasks only"}</p>
-            <div className="rows">{found.map((t) => <TaskRow key={t.id} task={t} showProject />)}</div>
+            <div className="rows">{found.map((t) => <TaskRow key={t.id} task={t} showProject showPath />)}</div>
           </>
         ) : (
           <Empty title={`Nothing matches "${q}"`}>{search.includeClosed ? "Try a shorter word, or check the spelling." : "Tick Include closed to search finished tasks too."}</Empty>
@@ -202,13 +203,38 @@ export function MyTasks() {
             </select>
           </label>
           {mode && <span className="field-hint">Drag the <b>⋮⋮</b> handle to move a task within its section.</span>}
+          <button
+            className="btn small print-btn"
+            disabled={open === 0 && !q}
+            onClick={() =>
+              printList(
+                {
+                  title: s.me ? `Tasks for ${s.me.full_name}` : "My tasks",
+                  filters: q ? [`Search: "${q}"`] : [],
+                  sections: q
+                    ? [{ title: "", tasks: found }]
+                    : [
+                        { title: "Overdue", tasks: b.late },
+                        { title: "Today", tasks: b.today },
+                        { title: "Next 7 days", tasks: b.week },
+                        { title: "Later", tasks: b.later },
+                        { title: "No due date", tasks: b.undated },
+                      ],
+                  showProject: true,
+                },
+                s,
+              )
+            }
+          >
+            <Printer size={14} />Print
+          </button>
         </div>
       </header>
       {q ? (
         found.length ? (
           <>
             <p className="search-count">{found.length} {found.length === 1 ? "match" : "matches"}{search.includeClosed ? ", closed tasks included" : ", open tasks only"}</p>
-            <div className="rows">{found.map((t) => <TaskRow key={t.id} task={t} showProject />)}</div>
+            <div className="rows">{found.map((t) => <TaskRow key={t.id} task={t} showProject showPath />)}</div>
           </>
         ) : (
           <Empty title={`Nothing matches "${q}"`}>{search.includeClosed ? "Try a shorter word, or check the spelling." : "Tick Include closed to search finished tasks too."}</Empty>

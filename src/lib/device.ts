@@ -144,7 +144,7 @@ export const deviceApi: Api = {
           if (t.id === id) {
             const next = { ...t, ...patch } as Task;
             if (patch.status) next.completed_at = patch.status === "done" ? (t.completed_at ?? now) : null;
-            if ("project_id" in patch && patch.project_id !== t.project_id) next.parent_task_id = null;
+            if ("project_id" in patch && patch.project_id !== t.project_id && !("parent_task_id" in patch)) next.parent_task_id = null;
             return next;
           }
           return moving?.has(t.id) ? { ...t, project_id: (patch.project_id as string | null) ?? null } : t;
