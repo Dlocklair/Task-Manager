@@ -3,6 +3,7 @@ import { useStore } from "../lib/store";
 import { ALL_BASE, applyFilters, countTotal, groupTasks, NO_SEARCH, normalise, rememberSort, reorderMode, withSavedSort, type TextSearch } from "../lib/listing";
 import type { GroupKey, ListConfig } from "../lib/types";
 import { ListTools } from "./ListTools";
+import { printList } from "../lib/print";
 import { SearchBox } from "./SearchBox";
 import { TaskSections } from "./TaskSections";
 import { TopActions } from "./TopActions";
@@ -21,7 +22,10 @@ export function AllTasks({ filterId }: { filterId?: string }) {
   const [search, setSearch] = useState<TextSearch>(NO_SEARCH);
   const roots = s.data.tasks.filter((t) => !t.parent_task_id);
   const ctx = { people: s.data.people, projects: s.data.projects, contexts: s.contexts, assigned: (id: string) => s.assigned(id) };
-  const tasks = applyFilters(roots, cfg, ctx, search);
+  // A search looks through subtasks too. A matching subtask shows the tasks it sits under.
+  const searching = search.q.trim().length > 0;
+  const pool = searching ? s.data.tasks : roots;
+  const tasks = applyFilters(pool, cfg, ctx, search);
   const sections = groupTasks(tasks, cfg, ctx);
   const open = roots.filter((t) => t.status !== "done").length;
 
@@ -45,7 +49,11 @@ export function AllTasks({ filterId }: { filterId?: string }) {
       </header>
 
       {roots.length > 0 && (
-        <ListTools scope="all" cfg={cfg} base={ALL_BASE} onChange={(c) => { rememberSort("all", c.sortBy); setCfg(c); }} search={search} onSearch={setSearch} groups={ALL_GROUPS} showProject showSearch={false} shown={tasks.length} total={countTotal(roots, cfg, search)} />
+        <ListTools scope="all" cfg={cfg} base={ALL_BASE} onChange={(c) => { rememberSort("all", c.sortBy); setCfg(c); }} search={search} onSearch={setSearch} groups={ALL_GROUPS} showProject showSearch={false}
+          onPrint={(filters, savedName) =>
+            printList({ title: savedName ? `All tasks: ${savedName}` : "All tasks", filters, sections: sections.map((x) => ({ title: x.title, tasks: x.tasks })), showProject: cfg.groupBy !== "project" }, s)
+          }
+          shown={tasks.length} total={countTotal(pool, cfg, search)} />
       )}
 
       {roots.length === 0 ? (
@@ -53,7 +61,7 @@ export function AllTasks({ filterId }: { filterId?: string }) {
       ) : tasks.length === 0 ? (
         <Empty title="No tasks match">Clear the search or filters above to see more.</Empty>
       ) : (
-        <TaskSections sections={sections} groupBy={cfg.groupBy} showProject={cfg.groupBy !== "project"} openDone={search.includeClosed && search.q.trim().length > 0} reorderable={reorderMode(cfg.sortBy)} />
+        <TaskSections sections={sections} groupBy={cfg.groupBy} showPath showProject={cfg.groupBy !== "project"} openDone={search.includeClosed && search.q.trim().length > 0} reorderable={reorderMode(cfg.sortBy)} />
       )}
     </div>
   );

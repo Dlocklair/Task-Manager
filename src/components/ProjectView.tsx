@@ -8,6 +8,7 @@ import { QuickAdd } from "./TaskList";
 import { buildOutline, type Outline } from "../lib/outline";
 import { EmailDialog } from "./EmailDialog";
 import { ListTools } from "./ListTools";
+import { printList } from "../lib/print";
 import { TopActions } from "./TopActions";
 import { TaskSections } from "./TaskSections";
 import { AvatarStack, Check, DueBadge, Empty, PriorityFlag } from "./ui";
@@ -30,7 +31,10 @@ export function ProjectView({ project, onEdit, filterId }: { project: Project; o
   const allTasks = s.topLevel(project.id);
   const ctx = { people: s.data.people, projects: s.data.projects, assigned: (id: string) => s.assigned(id) };
   // Filtering is by the task's own assignees. Subtasks are not filtered separately.
-  const tasks = applyFilters(allTasks, cfg, ctx, search);
+  // A search looks through subtasks too. A matching subtask shows the tasks it sits under.
+  const searching = search.q.trim().length > 0;
+  const pool = searching ? s.data.tasks.filter((t) => t.project_id === project.id) : allTasks;
+  const tasks = applyFilters(pool, cfg, ctx, search);
   const prog = s.progress(project.id);
 
   const board: Record<Step, Task[]> = { in_progress: [], todo: [], done: [] };
@@ -108,8 +112,20 @@ export function ProjectView({ project, onEdit, filterId }: { project: Project; o
           onSearch={setSearch}
           groups={mode === "list" ? PROJECT_GROUPS : []}
           showProject={false}
+          onPrint={(filters, savedName) =>
+            printList(
+              {
+                title: savedName ? `${project.name}: ${savedName}` : project.name,
+                filters,
+                // The board prints as a list grouped by status.
+                sections: (mode === "list" ? sections : groupTasks(tasks, { ...cfg, groupBy: "status" }, ctx)).map((x) => ({ title: x.title, tasks: x.tasks })),
+                showProject: false,
+              },
+              s,
+            )
+          }
           shown={tasks.length}
-          total={countTotal(allTasks, cfg, search)}
+          total={countTotal(pool, cfg, search)}
         />
       )}
 
@@ -118,7 +134,7 @@ export function ProjectView({ project, onEdit, filterId }: { project: Project; o
       ) : tasks.length === 0 ? (
         <Empty title="No tasks match">Clear the search or filters above to see more.</Empty>
       ) : mode === "list" ? (
-        <TaskSections sections={sections} groupBy={cfg.groupBy} openDone={search.includeClosed && search.q.trim().length > 0} reorderable={reorderMode(cfg.sortBy)} />
+        <TaskSections sections={sections} groupBy={cfg.groupBy} showPath openDone={search.includeClosed && search.q.trim().length > 0} reorderable={reorderMode(cfg.sortBy)} />
       ) : (
         <Board groups={board} projectId={project.id} />
       )}

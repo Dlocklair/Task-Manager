@@ -10,7 +10,7 @@ import { Modal } from "./ui";
  * their tasks (and those tasks' subtasks). Typing in the search box lists matching tasks from every project.
  * The selected tasks, and anything under them, can't be picked: a task can't go under itself.
  */
-export function ParentPicker({ ids, onPick, onClose }: { ids: string[]; onPick(parentId: string): void; onClose(): void }) {
+export function ParentPicker({ ids, onPick, onClose, title }: { ids: string[]; onPick(parentId: string): void; onClose(): void; title?: string }) {
   const s = useStore();
   const [q, setQ] = useState("");
   const [openProjects, setOpenProjects] = useState<Set<string>>(new Set());
@@ -89,7 +89,7 @@ export function ParentPicker({ ids, onPick, onClose }: { ids: string[]; onPick(p
   const target = chosen ? s.task(chosen) : undefined;
 
   return createPortal(
-    <Modal title={`Make ${ids.length} task${ids.length === 1 ? "" : "s"} subtasks of…`} onClose={onClose}>
+    <Modal title={title ?? `Make ${ids.length} task${ids.length === 1 ? "" : "s"} subtasks of…`} onClose={onClose}>
       <div className="pp">
         <label className="search pp-search">
           <Search size={16} />

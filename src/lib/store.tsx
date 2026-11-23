@@ -49,10 +49,16 @@ export interface Store {
   bulkDelete(ids: string[]): void;
   /** Move the selected tasks to become subtasks of parentId. */
   bulkReparent(ids: string[], parentId: string): void;
+  /** Make a task a subtask of parentId, at the given place among that task's subtasks. */
+  moveTask(id: string, parentId: string, position: number): void;
+  /** True when candidate is the task itself or sits anywhere under it. */
+  isWithin(candidateId: string, id: string): boolean;
 
   project(id: string | null): Project | undefined;
   task(id: string): Task | undefined;
   kids(id: string): Task[];
+  /** The tasks above a subtask, from the top-level task down to its direct parent. */
+  ancestors(id: string): Task[];
   topLevel(projectId: string): Task[];
   assigned(taskId: string): Person[];
   tasksFor(personId: string): Task[];
@@ -355,9 +361,44 @@ export function StoreProvider({ api, children }: { api: Api; children: ReactNode
         );
       },
 
+      moveTask: (id, parentId, position) => {
+        const parent = tasks.get(parentId);
+        const t = tasks.get(id);
+        if (!parent || !t || descendants(data.tasks, id).has(parentId)) return;
+        const branch = descendants(data.tasks, id);
+        const projectChanges = t.project_id !== parent.project_id;
+        mut((d) => ({
+          ...d,
+          tasks: d.tasks.map((x) =>
+            x.id === id
+              ? { ...x, parent_task_id: parentId, project_id: parent.project_id, position }
+              : projectChanges && branch.has(x.id)
+                ? { ...x, project_id: parent.project_id }
+                : x,
+          ),
+        }));
+        save(api.update("tasks", id, { parent_task_id: parentId, project_id: parent.project_id, position }));
+        // Subtasks under the moved one follow it to its new project.
+        if (projectChanges) branch.forEach((bid) => bid !== id && save(api.update("tasks", bid, { project_id: parent.project_id })));
+      },
+      isWithin: (candidateId, id) => descendants(data.tasks, id).has(candidateId),
+
       project: (id) => (id ? data.projects.find((p) => p.id === id) : undefined),
       task: (id) => tasks.get(id),
       kids: (id) => byParent.get(id) ?? [],
+      ancestors: (id) => {
+        const out: Task[] = [];
+        const seen = new Set<string>([id]);
+        let cur = tasks.get(id)?.parent_task_id;
+        while (cur && !seen.has(cur)) {
+          seen.add(cur);
+          const t = tasks.get(cur);
+          if (!t) break;
+          out.unshift(t);
+          cur = t.parent_task_id;
+        }
+        return out;
+      },
       topLevel: (projectId) => top.get(projectId) ?? [],
       assigned: (taskId) =>
         data.assignees.filter((a) => a.task_id === taskId).map((a) => people.get(a.person_id)).filter((p): p is Person => !!p),
