@@ -1,5 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
-import type { Api, Data, Note, ShareLink } from "./types";
+import type { Api, CalendarFeed, Data, Note, ShareLink } from "./types";
 import { DEFAULT_CONTEXTS } from "./util";
 
 const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
@@ -27,7 +27,7 @@ export const supabaseApi: Api = {
     if (!members.length) throw new Error("No workspace was found for this account.");
     const wsId = members[0].workspace_id;
 
-    const [ws, projects, categories, tasks, people, assignees, filters, links] = await Promise.all([
+    const [ws, projects, categories, tasks, people, assignees, filters, links, feeds] = await Promise.all([
       client.from("workspaces").select("id,name,default_assignee_ids,contexts").eq("id", wsId).single(),
       client.from("projects").select("id,workspace_id,name,description,color,position,default_priority,default_assignee_ids,category_id,created_at").eq("workspace_id", wsId).neq("status", "archived").order("position"),
       client.from("categories").select("id,workspace_id,name,created_at").eq("workspace_id", wsId).order("created_at"),
@@ -36,6 +36,7 @@ export const supabaseApi: Api = {
       client.from("task_assignees").select("task_id,person_id").limit(10000),
       client.from("saved_filters").select("id,workspace_id,owner_id,name,scope,config,created_at").eq("workspace_id", wsId).order("created_at"),
       client.from("share_links").select("token,person_id").eq("workspace_id", wsId),
+      client.from("calendar_feeds").select("token,person_id,timezone,created_at").eq("workspace_id", wsId).order("created_at"),
     ]);
     const workspace = check(ws) as Data["workspace"];
     if (!Array.isArray(workspace.contexts)) workspace.contexts = DEFAULT_CONTEXTS;
@@ -52,6 +53,8 @@ export const supabaseApi: Api = {
       savedFilters: check(filters) as Data["savedFilters"],
       // Older databases without update links still load.
       shareLinks: links.error ? [] : (links.data as ShareLink[]),
+      // Databases without calendar feeds yet still load.
+      calendarFeeds: feeds.error ? [] : (feeds.data as CalendarFeed[]),
     };
   },
 
@@ -80,6 +83,17 @@ export const supabaseApi: Api = {
   },
   async removeShareLink(token) {
     check(await sb!.from("share_links").delete().eq("token", token));
+  },
+  async createCalendarFeed(workspaceId, personId, timezone) {
+    return check(
+      await sb!.from("calendar_feeds").insert({ workspace_id: workspaceId, person_id: personId, timezone }).select("token,person_id,timezone,created_at").single(),
+    ) as CalendarFeed;
+  },
+  async removeCalendarFeed(token) {
+    check(await sb!.from("calendar_feeds").delete().eq("token", token));
+  },
+  calendarFeedUrl(token) {
+    return `${url}/functions/v1/calendar-feed?token=${token}`;
   },
   subscribe(onChange) {
     const client = sb!;

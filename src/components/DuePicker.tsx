@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef } from "react";
 import { X } from "lucide-react";
 import { addDays, isoDay } from "../lib/util";
 
@@ -10,43 +10,37 @@ export function DuePicker({ value, onChange, dark = false, clearable = true, lab
   const today = isoDay();
   const tomorrow = addDays(1);
   const custom = !!value && value !== today && value !== tomorrow;
-  const [picking, setPicking] = useState(false);
   const input = useRef<HTMLInputElement>(null);
 
-  // Open the calendar straight away when "Pick date" is pressed.
-  useEffect(() => {
-    if (!picking) return;
-    const el = input.current;
-    el?.focus();
-    try {
-      el?.showPicker?.();
-    } catch {
-      /* some browsers only open the picker from a direct tap on the field */
-    }
-  }, [picking]);
+  const choose = (v: string | null) => onChange(v);
 
-  const choose = (v: string | null) => {
-    setPicking(false);
-    onChange(v);
+  // The date field is always on the page. Before a date is picked it sits invisibly over the "Pick date…" chip,
+  // so the tap lands on the field itself. iPad Safari only opens its calendar from a real tap on the field;
+  // opening it from code made it flash up and close again.
+  const openPicker = () => {
+    try {
+      input.current?.showPicker?.();
+    } catch {
+      /* the tap on the field opens it anyway */
+    }
   };
 
   return (
     <div className={"due-picker" + (dark ? " dark" : "")} role="group" aria-label={label}>
       <button type="button" className={"chip-btn" + (value === today ? " on" : "")} aria-pressed={value === today} onClick={() => choose(value === today && clearable ? null : today)}>Today</button>
       <button type="button" className={"chip-btn" + (value === tomorrow ? " on" : "")} aria-pressed={value === tomorrow} onClick={() => choose(value === tomorrow && clearable ? null : tomorrow)}>Tomorrow</button>
-      {custom || picking ? (
+      <span className={"due-pick" + (custom ? " has-date" : "")}>
+        {!custom && <span className="chip-btn" aria-hidden="true">Pick date…</span>}
         <input
           ref={input}
           type="date"
-          className={custom ? "on" : ""}
-          aria-label={label}
+          className={custom ? "on" : "due-pick-overlay"}
+          aria-label={custom ? label : "Pick a date"}
           value={custom ? value! : ""}
+          onClick={openPicker}
           onChange={(e) => e.target.value && choose(e.target.value)}
-          onBlur={() => setPicking(false)}
         />
-      ) : (
-        <button type="button" className="chip-btn" onClick={() => setPicking(true)}>Pick date…</button>
-      )}
+      </span>
       {clearable && value && (
         <button type="button" className="chip-clear" aria-label="Remove due date" title="Remove due date" onClick={() => choose(null)}>
           <X size={14} />

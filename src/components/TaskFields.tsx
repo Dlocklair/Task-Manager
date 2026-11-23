@@ -4,6 +4,7 @@ import type { Priority, Task, TaskContext } from "../lib/types";
 import { PRIORITIES, STATUSES, step } from "../lib/util";
 import { AssigneePicker } from "./AssigneePicker";
 import { DuePicker } from "./DuePicker";
+import { AddToCalendar } from "./AddToCalendar";
 import { ReminderField } from "./ReminderField";
 import { DueBadge } from "./ui";
 
@@ -77,6 +78,12 @@ export function TaskFields({ task, compact = false }: { task: Task; compact?: bo
           <span className="field-label">Remind</span>
           <ReminderField task={task} />
         </div>
+        {task.due_date && (
+          <div className="field-line">
+            <span className="field-label">Calendar</span>
+            <AddToCalendar task={task} />
+          </div>
+        )}
       </section>
 
       <section className="field-card" aria-label="Priority and context">

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useStore } from "../lib/store";
-import { ALL_BASE, applyFilters, countTotal, groupTasks, NO_SEARCH, rememberSort, reorderMode, withSavedSort, type TextSearch } from "../lib/listing";
+import { ALL_BASE, applyFilters, countTotal, groupTasks, NO_SEARCH, normalise, rememberSort, reorderMode, withSavedSort, type TextSearch } from "../lib/listing";
 import type { GroupKey, ListConfig } from "../lib/types";
 import { ListTools } from "./ListTools";
 import { SearchBox } from "./SearchBox";
@@ -11,9 +11,13 @@ import { Empty } from "./ui";
 const ALL_GROUPS: GroupKey[] = ["status", "assigned", "priority", "due", "project", "none"];
 
 /** Every open or finished task across all projects. Subtasks sit under their parent. */
-export function AllTasks() {
+export function AllTasks({ filterId }: { filterId?: string }) {
   const s = useStore();
-  const [cfg, setCfg] = useState<ListConfig>(() => withSavedSort(ALL_BASE, "all"));
+  // Opened from a saved filter in the sidebar: start with that filter applied.
+  const [cfg, setCfg] = useState<ListConfig>(() => {
+    const f = filterId ? s.data.savedFilters.find((x) => x.id === filterId) : undefined;
+    return f ? normalise(f.config, ALL_BASE) : withSavedSort(ALL_BASE, "all");
+  });
   const [search, setSearch] = useState<TextSearch>(NO_SEARCH);
   const roots = s.data.tasks.filter((t) => !t.parent_task_id);
   const ctx = { people: s.data.people, projects: s.data.projects, contexts: s.contexts, assigned: (id: string) => s.assigned(id) };

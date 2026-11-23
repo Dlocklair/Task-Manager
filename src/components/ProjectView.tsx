@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Columns3, LayoutList, Mail, Pencil } from "lucide-react";
 import { useStore } from "../lib/store";
-import { applyFilters, countTotal, DEFAULT_CONFIG, groupTasks, NO_SEARCH, rememberSort, reorderMode, withSavedSort, type TextSearch } from "../lib/listing";
+import { applyFilters, countTotal, DEFAULT_CONFIG, groupTasks, NO_SEARCH, normalise, rememberSort, reorderMode, withSavedSort, type TextSearch } from "../lib/listing";
 import type { GroupKey, ListConfig, Project, Task } from "../lib/types";
 import { sortCompare, STATUSES, step, tint } from "../lib/util";
 import { QuickAdd } from "./TaskList";
@@ -17,10 +17,14 @@ type Step = "todo" | "in_progress" | "done";
 /** Groupings that make sense inside one project. Board view is always by status. */
 const PROJECT_GROUPS: GroupKey[] = ["status", "assigned", "priority", "due", "none"];
 
-export function ProjectView({ project, onEdit }: { project: Project; onEdit(): void }) {
+export function ProjectView({ project, onEdit, filterId }: { project: Project; onEdit(): void; filterId?: string }) {
   const s = useStore();
   const [mode, setMode] = useState<"list" | "board">("list");
-  const [cfg, setCfg] = useState<ListConfig>(() => withSavedSort(DEFAULT_CONFIG, "project"));
+  // Opened from a saved filter in the sidebar: start with that filter applied.
+  const [cfg, setCfg] = useState<ListConfig>(() => {
+    const f = filterId ? s.data.savedFilters.find((x) => x.id === filterId) : undefined;
+    return f ? normalise(f.config, DEFAULT_CONFIG) : withSavedSort(DEFAULT_CONFIG, "project");
+  });
   const [search, setSearch] = useState<TextSearch>(NO_SEARCH);
   const [email, setEmail] = useState<{ to: string[]; outline: Outline } | null>(null);
   const allTasks = s.topLevel(project.id);

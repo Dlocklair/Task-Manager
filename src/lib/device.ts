@@ -87,6 +87,7 @@ export const deviceApi: Api = {
       assignees: db.assignees,
       savedFilters: db.savedFilters,
       shareLinks: [],
+      calendarFeeds: [],
     };
   },
 

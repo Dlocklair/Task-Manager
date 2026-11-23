@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import type { Api, ContextDef, Data, ListConfig, Note, Person, Priority, Project, ShareLink, Status, Task, View } from "./types";
+import type { Api, CalendarFeed, ContextDef, Data, ListConfig, Note, Person, Priority, Project, ShareLink, Status, Task, View } from "./types";
 import { COLORS, isoDay, uid } from "./util";
 
 interface NewTask {
@@ -80,6 +80,10 @@ export interface Store {
   shareUrl(link: ShareLink): string;
   createShareLink(personId: string): Promise<ShareLink | null>;
   removeShareLink(personId: string): void;
+  /** Calendar feeds: a private address Google Calendar, Outlook or Apple Calendar subscribes to. */
+  createCalendarFeed(personId: string | null): Promise<CalendarFeed | null>;
+  removeCalendarFeed(token: string): void;
+  calendarFeedUrl(feed: CalendarFeed): string | null;
   deleteProject(id: string): void;
   addTask(input: NewTask): string;
   updateTask(id: string, patch: Partial<Pick<Task, "title" | "description" | "status" | "priority" | "context" | "due_date" | "due_time" | "remind_before_minutes" | "project_id" | "position">>): void;
@@ -433,6 +437,25 @@ export function StoreProvider({ api, children }: { api: Api; children: ReactNode
         mut((d) => ({ ...d, shareLinks: d.shareLinks.filter((l) => l.person_id !== personId) }));
         save(api.removeShareLink(link.token));
       },
+
+      createCalendarFeed: async (personId) => {
+        if (!api.createCalendarFeed) return null;
+        try {
+          const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+          const feed = await api.createCalendarFeed(data.workspace.id, personId, tz);
+          mut((d) => ({ ...d, calendarFeeds: [...d.calendarFeeds, feed] }));
+          return feed;
+        } catch (e) {
+          toast(`The calendar address was not made. ${e instanceof Error ? e.message : ""}`.trim());
+          return null;
+        }
+      },
+      removeCalendarFeed: (token) => {
+        if (!api.removeCalendarFeed) return;
+        mut((d) => ({ ...d, calendarFeeds: d.calendarFeeds.filter((f) => f.token !== token) }));
+        save(api.removeCalendarFeed(token));
+      },
+      calendarFeedUrl: (feed) => api.calendarFeedUrl?.(feed.token) ?? null,
 
       deleteProject: (id) => {
         mut((d) => ({ ...d, projects: d.projects.filter((p) => p.id !== id), tasks: d.tasks.filter((t) => t.project_id !== id) }));

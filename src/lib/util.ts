@@ -90,6 +90,21 @@ export function byUrgency(a: Task, b: Task): number {
   return a.position - b.position;
 }
 
+/**
+ * A person's tasks: dated tasks first, soonest due date (and time) first, then priority.
+ * Tasks with no due date come after, highest priority first.
+ */
+export function byDueThenPriority(a: Task, b: Task): number {
+  if (!!a.due_date !== !!b.due_date) return a.due_date ? -1 : 1;
+  if (a.due_date && b.due_date && a.due_date !== b.due_date) return a.due_date < b.due_date ? -1 : 1;
+  if (a.due_date && b.due_date) {
+    const at = a.due_time ?? "99", bt = b.due_time ?? "99";
+    if (at !== bt) return at < bt ? -1 : 1;
+  }
+  if (a.priority !== b.priority) return PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority];
+  return a.position - b.position;
+}
+
 export function tint(color: string): CSSProperties {
   return { ["--pc" as string]: color } as CSSProperties;
 }
