@@ -120,6 +120,17 @@ export interface Data {
   savedFilters: SavedFilter[];
   /** Update links you have made, one per person at most. */
   shareLinks: ShareLink[];
+  /** Calendar feeds for Google Calendar, Outlook and Apple Calendar. Only the cloud version has them. */
+  calendarFeeds: CalendarFeed[];
+}
+
+/** A private calendar address. Calendar apps subscribe to it and show tasks with due dates. */
+export interface CalendarFeed {
+  token: string;
+  /** null = every task with a due date */
+  person_id: string | null;
+  timezone: string;
+  created_at: string;
 }
 
 /** A link that lets one person see and update the tasks assigned to them, without an account. */
@@ -145,13 +156,20 @@ export interface Api {
   /** Update links. Only the cloud version has them. */
   createShareLink?(workspaceId: string, personId: string): Promise<ShareLink>;
   removeShareLink?(token: string): Promise<void>;
+  /** Calendar feeds. Only the cloud version has them. */
+  createCalendarFeed?(workspaceId: string, personId: string | null, timezone: string): Promise<CalendarFeed>;
+  removeCalendarFeed?(token: string): Promise<void>;
+  /** The address calendar apps subscribe to. */
+  calendarFeedUrl?(token: string): string;
 }
 
 export type View =
   | { kind: "home" }
   | { kind: "projects" }
-  | { kind: "project"; id: string }
-  | { kind: "all" }
+  /** filterId opens the page with that saved filter applied. */
+  | { kind: "project"; id: string; filterId?: string }
+  | { kind: "all"; filterId?: string }
   | { kind: "my" }
   | { kind: "people" }
-  | { kind: "settings" };
+  | { kind: "settings" }
+  | { kind: "setup" };

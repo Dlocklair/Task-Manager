@@ -76,7 +76,7 @@ function build(): Data {
   add("pr-taxes", "Gather the 1099s", "todo", 20, "none", ["p-me"]);
   add("pr-taxes", "Send receipts to the accountant", "todo", null, "low", ["p-me"]);
 
-  return { userId: "demo-user", email: "demo@example.com", workspace: { id: WS, name: "Demo workspace", default_assignee_ids: [], contexts: DEFAULT_CONTEXTS }, projects, tasks, people, assignees, savedFilters: [], categories, shareLinks: [] };
+  return { userId: "demo-user", email: "demo@example.com", workspace: { id: WS, name: "Demo workspace", default_assignee_ids: [], contexts: DEFAULT_CONTEXTS }, projects, tasks, people, assignees, savedFilters: [], categories, shareLinks: [], calendarFeeds: [] };
 }
 
 const demoNotes: Record<string, Note[]> = {

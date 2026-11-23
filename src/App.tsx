@@ -16,6 +16,7 @@ import { TaskDetail } from "./components/TaskDetail";
 import { Home, MyTasks, People, Projects } from "./components/views";
 import { AllTasks } from "./components/AllTasks";
 import { SettingsPage } from "./components/Settings";
+import { SetupGuide } from "./components/SetupGuide";
 import { SharedTasks } from "./components/SharedTasks";
 import { NewTaskContext } from "./components/TopActions";
 
@@ -79,11 +80,12 @@ function Workspace({ onSignOut }: { onSignOut?: () => void }) {
         <NewTaskContext.Provider value={() => setNewTask(true)}>
         {s.view.kind === "home" && <Home onNewProject={newProject} />}
         {s.view.kind === "projects" && <Projects onNewProject={newProject} />}
-        {s.view.kind === "all" && <AllTasks />}
+        {s.view.kind === "all" && <AllTasks key={s.view.filterId ?? "all"} filterId={s.view.filterId} />}
         {s.view.kind === "my" && <MyTasks />}
         {s.view.kind === "people" && <People />}
         {s.view.kind === "settings" && <SettingsPage onSignOut={onSignOut} />}
-        {s.view.kind === "project" && (project ? <ProjectView key={project.id} project={project} onEdit={() => setProjectDialog({ project })} /> : <Home onNewProject={newProject} />)}
+        {s.view.kind === "setup" && <SetupGuide />}
+        {s.view.kind === "project" && (project ? <ProjectView key={project.id + (s.view.filterId ?? "")} project={project} filterId={s.view.filterId} onEdit={() => setProjectDialog({ project })} /> : <Home onNewProject={newProject} />)}
         </NewTaskContext.Provider>
       </main>
       {selected && (

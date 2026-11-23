@@ -1,8 +1,9 @@
 import { useState, type FormEvent } from "react";
-import { ArrowDown, ArrowUp, LogOut, Plus, X } from "lucide-react";
+import { ArrowDown, ArrowUp, Compass, LogOut, Plus, X } from "lucide-react";
 import { useStore } from "../lib/store";
 import type { ContextDef } from "../lib/types";
 import { uid } from "../lib/util";
+import { CalendarSettings } from "./CalendarSettings";
 
 /** Settings for the whole workspace. Contexts first; more settings can sit here later. */
 export function SettingsPage({ onSignOut }: { onSignOut?: () => void }) {
@@ -11,7 +12,18 @@ export function SettingsPage({ onSignOut }: { onSignOut?: () => void }) {
     <div className="page">
       <header className="page-head">
         <h1>Settings</h1>
+        <span className="header-actions">
+          <button className="btn" onClick={() => s.go({ kind: "setup" })}><Compass size={16} />Setup guide</button>
+        </span>
       </header>
+
+      <section className="settings-card" id="calendars" aria-labelledby="cal-head">
+        <h2 id="cal-head">Calendars</h2>
+        <p className="field-hint">
+          Show tasks with a due date in Google Calendar or Outlook. Make a calendar address here, then add it to your calendar with one of the buttons. Tasks with a time become 30-minute events; tasks without one show as all-day.
+        </p>
+        <CalendarSettings />
+      </section>
 
       <section className="settings-card" aria-labelledby="ctx-head">
         <h2 id="ctx-head">Contexts</h2>

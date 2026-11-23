@@ -12,7 +12,10 @@ Built with React, TypeScript and Vite. Data lives in Supabase (Postgres with row
 - **People** – add anyone by name and assign them to tasks. They don't need an account.
 - **Update links** – give someone a private link (People → Update link, or from Email tasks). It opens their assigned tasks with no sign-in; they can change status and add notes, and the changes appear in your tasks. Turn a link off at any time.
 - **Email tasks** – sends an easy-to-read outline (numbered tasks with due date, priority, details and subtasks), with a Word document of the same list to attach or share.
-- **Settings** – rename, add, remove and reorder contexts.
+- **Calendars** – Settings → Calendars makes a private calendar address that Google Calendar, Outlook or Apple Calendar subscribes to; tasks with due dates show up as events. Any single task can also be added from its Calendar line.
+- **Saved filters** – appear in the sidebar; more than three fold under a Filters heading.
+- **Setup guide** – the compass button in the sidebar walks through people, defaults, projects, calendars and more. The same steps are in [SETUP.md](SETUP.md).
+- **Settings** – calendars, and rename, add, remove and reorder contexts.
 - **My tasks** – everything assigned to you, by due date.
 - **Phone and tablet** – bottom tab bar and full-screen task details on small screens; "Add to Home Screen" installs it like an app.
 
@@ -30,7 +33,7 @@ Open `http://localhost:5173/?demo` to look around with sample data and no accoun
 
 The connection details are in `.env`. The publishable key is designed to be public; row-level security in the database decides what each signed-in person can see.
 
-The database schema is in `supabase/migrations/`. To rebuild the database from scratch, run those files in order in the Supabase SQL editor (or `supabase db push`).
+The database schema is in `supabase/migrations/`; the calendar feed is the Edge Function in `supabase/functions/calendar-feed` (deploy with JWT verification off). See [SETUP.md](SETUP.md). To rebuild the database from scratch, run those files in order in the Supabase SQL editor (or `supabase db push`).
 
 Sign-in uses an emailed link or an email and password. In the Supabase dashboard under Authentication → URL Configuration, the Site URL and Redirect URLs must include every address the app is served from (for example `http://localhost:5173` and your deployed URL).
 

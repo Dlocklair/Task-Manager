@@ -4,7 +4,7 @@ import { Link2, Mail, Pencil, Plus, Tags, Trash2 } from "lucide-react";
 import { useStore } from "../lib/store";
 import type { Person, SortKey, Task } from "../lib/types";
 import type { ReorderScope } from "../lib/drag";
-import { addDays, byUrgency, COLORS, firstName, greeting, isoDay, sortCompare, tint } from "../lib/util";
+import { addDays, byDueThenPriority, byUrgency, COLORS, firstName, greeting, isoDay, sortCompare, tint } from "../lib/util";
 import { NO_SEARCH, rememberSort, reorderMode, savedSort, searchTasks, SORT_OPTIONS, type TextSearch } from "../lib/listing";
 import { CategoryDialog } from "./Shell";
 import { buildOutline, type Outline } from "../lib/outline";
@@ -236,7 +236,9 @@ export function People() {
   const [email, setEmail] = useState<{ to: string[]; outline: Outline; personId: string } | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const person = s.data.people.find((p) => p.id === pick);
-  const theirs = person ? s.tasksFor(person.id).filter((t) => t.status !== "done").sort(byUrgency) : [];
+  const theirs = person ? s.tasksFor(person.id).filter((t) => t.status !== "done").sort(byDueThenPriority) : [];
+  const theirsDated = theirs.filter((t) => t.due_date);
+  const theirsUndated = theirs.filter((t) => !t.due_date);
   // Only people other than you can be deleted here; your own entry stays.
   const deletable = s.data.people.filter((p) => p.user_id !== s.data.userId);
   const chosen = s.selecting ? deletable.filter((p) => selected.has(p.id)) : [];
@@ -364,7 +366,18 @@ export function People() {
               )}
             </div>
           </div>
-          {theirs.length ? <div className="rows">{theirs.map((t) => <TaskRow key={t.id} task={t} showProject />)}</div> : <Empty title={`${firstName(person.full_name)} has no open tasks`} />}
+          {theirs.length ? (
+            <>
+              <p className="field-hint person-sort-note">Sorted by due date. Tasks with no date follow, highest priority first.</p>
+              {theirsDated.length > 0 && <div className="rows">{theirsDated.map((t) => <TaskRow key={t.id} task={t} showProject />)}</div>}
+              {theirsUndated.length > 0 && (
+                <>
+                  <h3 className="sub-head">No due date<span>{theirsUndated.length}</span></h3>
+                  <div className="rows">{theirsUndated.map((t) => <TaskRow key={t.id} task={t} showProject />)}</div>
+                </>
+              )}
+            </>
+          ) : <Empty title={`${firstName(person.full_name)} has no open tasks`} />}
         </section>
       )}
 

@@ -1,12 +1,12 @@
 import { useState, type FormEvent } from "react";
-import { CircleCheck, FolderKanban, House, LayoutList, LogOut, Plus, Settings, Tags, Users, X } from "lucide-react";
+import { Bookmark, ChevronDown, CircleCheck, Compass, FolderKanban, House, LayoutList, LogOut, Plus, Settings, Tags, Users, X } from "lucide-react";
 import { groupProjects } from "../lib/categories";
 import { useStore } from "../lib/store";
 import { DuePicker } from "./DuePicker";
 import type { Category, Priority, Project, View } from "../lib/types";
 import { COLORS, PRIORITIES, tint } from "../lib/util";
 import { Avatar, Modal, Swatches } from "./ui";
-import { PeoplePicks } from "./PeoplePicks";
+import { PeopleDropdown } from "./PeopleDropdown";
 
 const NAV: { view: View; label: string; icon: typeof House }[] = [
   { view: { kind: "home" }, label: "Home", icon: House },
@@ -28,12 +28,14 @@ export function Sidebar({ onNewProject, onSignOut }: { onNewProject(): void; onS
       <div className="brand"><span className="brand-mark" />Task Manager</div>
       <div className="side-nav">
         {NAV.map(({ view, label, icon: Icon }) => (
-          <button key={label} className={"side-link" + (s.view.kind === view.kind ? " on" : "")} onClick={() => s.go(view)}>
+          <button key={label} className={"side-link" + (s.view.kind === view.kind && !("filterId" in s.view && s.view.filterId) ? " on" : "")} onClick={() => s.go(view)}>
             <Icon size={18} />{label}
             {view.kind === "my" && myOpen > 0 && <span className="badge">{myOpen}</span>}
           </button>
         ))}
       </div>
+
+      <SavedFilterLinks />
 
       <div className="side-label">
         Projects
@@ -69,6 +71,9 @@ export function Sidebar({ onNewProject, onSignOut }: { onNewProject(): void; onS
       <div className="side-foot">
         {s.me && <Avatar person={s.me} size={30} />}
         <span className="grow who">{s.me?.full_name ?? s.data.email}{s.api.demo && <small>Sample data, nothing is saved</small>}{s.api.local && <small>Saved on this device only</small>}</span>
+        <button className={"icon-btn on-dark" + (s.view.kind === "setup" ? " on" : "")} onClick={() => s.go({ kind: "setup" })} aria-label="Setup guide" title="Setup guide">
+          <Compass size={17} />
+        </button>
         <button className={"icon-btn on-dark" + (s.view.kind === "settings" ? " on" : "")} onClick={() => s.go({ kind: "settings" })} aria-label="Settings" title="Settings">
           <Settings size={17} />
         </button>
@@ -79,6 +84,63 @@ export function Sidebar({ onNewProject, onSignOut }: { onNewProject(): void; onS
         )}
       </div>
     </nav>
+  );
+}
+
+const FILTERS_OPEN_KEY = "tm-side-filters-open";
+
+/**
+ * Saved filters, so you can jump straight to one. Up to three sit in the menu as they are;
+ * with more than three they fold under a Filters heading you can open and close.
+ */
+function SavedFilterLinks() {
+  const s = useStore();
+  const [open, setOpen] = useState(() => {
+    try {
+      return localStorage.getItem(FILTERS_OPEN_KEY) === "1";
+    } catch {
+      return false;
+    }
+  });
+  // A filter saved on a project that has since been deleted has nowhere to open.
+  const filters = s.data.savedFilters.filter((f) => f.scope === "all" || s.project(f.scope));
+  if (filters.length === 0) return null;
+  const current = "filterId" in s.view ? s.view.filterId : undefined;
+  const toggle = () => {
+    const next = !open;
+    setOpen(next);
+    try {
+      localStorage.setItem(FILTERS_OPEN_KEY, next ? "1" : "0");
+    } catch {
+      /* remembering is only a convenience */
+    }
+  };
+  const links = filters.map((f) => {
+    const project = f.scope === "all" ? undefined : s.project(f.scope);
+    return (
+      <button
+        key={f.id}
+        className={"side-link filter" + (current === f.id ? " on" : "")}
+        title={project ? `${f.name} (in ${project.name})` : `${f.name} (All tasks)`}
+        onClick={() => s.go(project ? { kind: "project", id: project.id, filterId: f.id } : { kind: "all", filterId: f.id })}
+      >
+        {project ? <i style={{ background: project.color }} /> : <Bookmark size={16} />}
+        <span className="grow">{f.name}</span>
+      </button>
+    );
+  });
+  if (filters.length <= 3) return <div className="side-nav side-filters" aria-label="Saved filters">{links}</div>;
+  const holdsCurrent = filters.some((f) => f.id === current);
+  return (
+    <div className="side-filters" aria-label="Saved filters">
+      <button className="side-link side-fold" aria-expanded={open || holdsCurrent} onClick={toggle}>
+        <Bookmark size={18} />
+        <span className="grow">Filters</span>
+        <span className="badge quiet">{filters.length}</span>
+        <ChevronDown size={16} className={"fold-chev" + (open || holdsCurrent ? " turn" : "")} />
+      </button>
+      {(open || holdsCurrent) && <div className="side-group-items nested">{links}</div>}
+    </div>
   );
 }
 
@@ -151,7 +213,7 @@ export function ProjectDialog({ project, onClose }: { project?: Project; onClose
             <input type="checkbox" checked={!ownDefaults} onChange={(e) => setOwnDefaults(!e.target.checked)} />
             Use the workspace default
           </label>
-          {ownDefaults && <PeoplePicks label="Default assignees for this project" value={assignees} onChange={setAssignees} />}
+          {ownDefaults && <PeopleDropdown label="Default assignees for this project" value={assignees} onChange={setAssignees} placeholder="Choose who gets new tasks" />}
           <p className="field-hint">{ownDefaults ? "Only these people are assigned to new tasks in this project." : "Uses the people chosen under People → Assigned to by default."}</p>
         </div>
         <div className="form-actions">
