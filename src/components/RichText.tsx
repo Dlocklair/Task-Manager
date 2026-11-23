@@ -218,8 +218,9 @@ export function RichEditor({ value, onChange, rows = 4, placeholder, ariaLabel, 
 }
 
 /** Formatted text that turns into an editor when clicked. Used for task details. */
-export function RichField({ value, label, placeholder, onSave }: { value: string; label: string; placeholder: string; onSave(v: string | null): void }) {
-  const [editing, setEditing] = useState(false);
+export function RichField({ value, label, placeholder, onSave, startEditing = false }: { value: string; label: string; placeholder: string; onSave(v: string | null): void; startEditing?: boolean }) {
+  // startEditing: opened from a folded section with nothing in it yet, so go straight to typing.
+  const [editing, setEditing] = useState(startEditing && !value.trim());
   const [draft, setDraft] = useState(value);
 
   useEffect(() => {
